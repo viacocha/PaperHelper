@@ -29,14 +29,19 @@ def generate_report(review: ReviewResult, output_path: Path) -> Path:
     if review.issues:
         for item in review.issues:
             paragraph = document.add_paragraph(style="List Bullet")
-            paragraph.add_run(f"[{item.severity.upper()}] {item.title}：").bold = True
+            paragraph.add_run(f"[{item.action_priority.upper()}/{item.severity.upper()}] {item.title}：").bold = True
             paragraph.add_run(item.details + " ")
             paragraph.add_run("建议：").bold = True
             paragraph.add_run(item.suggestion)
     else:
         document.add_paragraph("未检测到明显高风险问题，但仍建议结合题目子问逐项复核。")
 
-    _add_heading(document, "四、逐段建议")
+    _add_heading(document, "四、修改优先级队列")
+    _add_issue_group(document, "必须补写", review.must_fix)
+    _add_issue_group(document, "建议补强", review.should_fix)
+    _add_issue_group(document, "可优化项", review.could_improve)
+
+    _add_heading(document, "五、逐段建议")
     for paragraph_review in review.paragraph_reviews:
         document.add_paragraph(f"第 {paragraph_review.index} 段：{paragraph_review.excerpt}", style="List Bullet")
         if paragraph_review.strengths:
@@ -46,7 +51,7 @@ def generate_report(review: ReviewResult, output_path: Path) -> Path:
         if paragraph_review.suggestions:
             document.add_paragraph("建议：" + "；".join(paragraph_review.suggestions))
 
-    _add_heading(document, "五、修改优先级")
+    _add_heading(document, "六、修改顺序建议")
     priorities = [
         "先补齐题目要求的子问、专属产物和关键过程。",
         "再强化项目经理视角、问题应对和结果成效。",
@@ -68,6 +73,15 @@ def _add_title(document: Document, text: str) -> None:
 
 def _add_heading(document: Document, text: str) -> None:
     document.add_paragraph().add_run(text).bold = True
+
+
+def _add_issue_group(document: Document, title: str, items) -> None:
+    document.add_paragraph(title).runs[0].bold = True
+    if not items:
+        document.add_paragraph("当前无对应问题。")
+        return
+    for item in items:
+        document.add_paragraph(f"{item.title}：{item.suggestion}", style="List Bullet")
 
 
 def _label(value: str) -> str:

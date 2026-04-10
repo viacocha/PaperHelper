@@ -67,6 +67,12 @@ export function ResultView({ review }: ResultViewProps) {
         </div>
       </div>
 
+      <div className="grid three-columns">
+        <PriorityPanel title="必须补写" items={review.must_fix} emptyText="当前无必须补写项。" />
+        <PriorityPanel title="建议补强" items={review.should_fix} emptyText="当前无建议补强项。" />
+        <PriorityPanel title="可优化项" items={review.could_improve} emptyText="当前无可优化项。" />
+      </div>
+
       <div className="panel">
         <h3>逐段建议</h3>
         <div className="paragraph-list">
@@ -95,4 +101,32 @@ function label(value: ReviewResult["pass_probability"]): string {
     return "接近通过，仍需修改";
   }
   return "当前通过风险高";
+}
+
+function PriorityPanel({
+  title,
+  items,
+  emptyText
+}: {
+  title: string;
+  items: ReviewResult["issues"];
+  emptyText: string;
+}) {
+  return (
+    <div className="panel">
+      <h3>{title}</h3>
+      <ul className="issue-list compact">
+        {items.length ? (
+          items.map((item, index) => (
+            <li key={`${title}-${item.title}-${index}`} className={`severity-${item.severity}`}>
+              <strong>{item.title}</strong>
+              <p>{item.suggestion}</p>
+            </li>
+          ))
+        ) : (
+          <li>{emptyText}</li>
+        )}
+      </ul>
+    </div>
+  );
 }

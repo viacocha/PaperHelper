@@ -170,6 +170,12 @@ input[type="file"] {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.grid.three-columns {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .metric-list,
 .issue-list {
   margin: 0;
@@ -190,6 +196,10 @@ input[type="file"] {
   padding: 14px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.65);
+}
+
+.issue-list.compact li p {
+  margin-bottom: 0;
 }
 
 .severity-high {
@@ -218,7 +228,8 @@ input[type="file"] {
 @media (max-width: 840px) {
   .panel-header,
   .score-band,
-  .grid.two-columns {
+  .grid.two-columns,
+  .grid.three-columns {
     grid-template-columns: 1fr;
     display: grid;
   }

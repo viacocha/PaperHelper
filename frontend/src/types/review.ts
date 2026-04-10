@@ -14,6 +14,7 @@ export type CriterionScore = {
 
 export type Issue = {
   severity: "high" | "medium" | "low";
+  action_priority: "must" | "should" | "could";
   title: string;
   details: string;
   suggestion: string;
@@ -42,6 +43,9 @@ export type ReviewResult = {
   summary: string;
   dimensions: CriterionScore[];
   issues: Issue[];
+  must_fix: Issue[];
+  should_fix: Issue[];
+  could_improve: Issue[];
   paragraph_reviews: ParagraphReview[];
   suggested_report_name: string;
 };

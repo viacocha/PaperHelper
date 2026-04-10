@@ -43,6 +43,7 @@ class EssayReviewer:
 
         dimensions = self._score_dimensions(context)
         issues = self._collect_issues(context)
+        must_fix, should_fix, could_improve = self._group_issues(issues)
         paragraph_reviews = self._review_paragraphs(context)
         raw_total = sum(item.score for item in dimensions)
         total_score = round(self._apply_total_adjustments(raw_total, context, issues), 1)
@@ -62,6 +63,9 @@ class EssayReviewer:
             summary=self._build_summary(total_score, issues, context),
             dimensions=dimensions,
             issues=issues,
+            must_fix=must_fix,
+            should_fix=should_fix,
+            could_improve=could_improve,
             paragraph_reviews=paragraph_reviews,
             suggested_report_name=report_name,
         )
@@ -133,6 +137,7 @@ class EssayReviewer:
         if context.essay_quality < 0.55:
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="文档更像讲义或资料，不像考试论文",
                 details="系统检测到该文档缺少稳定的项目背景、第一人称管理动作和论文式结构，更接近讲义、提纲或资料整理稿。",
                 suggestion="请上传按考试要求撰写的论文正文，至少包含项目概要、本人角色、主体过程、问题应对和结果总结。",
@@ -141,6 +146,7 @@ class EssayReviewer:
         if parsed.word_count < min_words:
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="正文字数不足",
                 details=f"当前字数约 {parsed.word_count}，低于建议下限 {min_words}，通过风险高。",
                 suggestion="补充项目背景、核心管理过程、问题应对和项目结果，优先扩充主体段落。",
@@ -148,6 +154,7 @@ class EssayReviewer:
         elif parsed.word_count > max_words:
             issues.append(Issue(
                 severity="medium",
+                action_priority="should",
                 title="字数偏多",
                 details=f"当前字数约 {parsed.word_count}，超过建议上限 {max_words}。",
                 suggestion="压缩空泛概念和重复表述，保留项目动作、工具和结果。",
@@ -156,6 +163,7 @@ class EssayReviewer:
         if "项目经理" not in text:
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="缺少项目经理角色定位",
                 details="论文没有清晰说明本人担任项目经理及其职责。",
                 suggestion="在项目概要中明确写出本人担任乙方项目经理，并说明负责启动、规划、执行、监控和收尾等工作。",
@@ -165,6 +173,7 @@ class EssayReviewer:
         if len(missing_processes) >= max(2, len(context.standard.required_processes) // 2):
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="核心过程覆盖不足",
                 details=f"当前题型要求的关键过程缺失较多，缺失项包括：{'、'.join(missing_processes[:6])}。",
                 suggestion="主体部分按过程逐段展开，每段至少写概念、本人做法、工具文档和效果。",
@@ -174,6 +183,7 @@ class EssayReviewer:
         if missing_artifacts:
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="专属产物响应不足",
                 details=f"当前题型应重点响应的产物未明显出现：{'、'.join(missing_artifacts)}。",
                 suggestion="把题目要求的矩阵、登记册、WBS、核对单或指标写到对应过程段中，不要只在结尾单独提到。",
@@ -182,6 +192,7 @@ class EssayReviewer:
         if not any(token in text for token in ["问题", "风险", "困难", "偏差", "冲突"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="should",
                 title="缺少问题与应对场景",
                 details="论文偏像顺叙说明，缺少项目管理中常见的问题、纠偏和改进。",
                 suggestion="至少补充 1 到 2 个真实管理难点，并写清楚如何处理以及最终结果。",
@@ -190,6 +201,7 @@ class EssayReviewer:
         if not any(token in text for token in ["验收", "上线", "成效", "满意", "体会", "总结"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="should",
                 title="结尾成果与总结偏弱",
                 details="未明显体现项目结果、验收情况和个人心得。",
                 suggestion="结尾补充项目上线或验收结果、业务效果、用户反馈以及个人管理体会。",
@@ -198,6 +210,7 @@ class EssayReviewer:
         if len(parsed.paragraphs) < 6:
             issues.append(Issue(
                 severity="low",
+                action_priority="could",
                 title="段落结构偏少",
                 details="正文段落数量较少，容易形成大段堆叠，影响阅卷体验。",
                 suggestion="按项目概要、主论点、过程分论点、问题应对、总结等结构拆分段落。",
@@ -206,6 +219,7 @@ class EssayReviewer:
         if context.essay_signals["structure_signals"] < 2:
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="论文结构块不完整",
                 details="当前文档没有明显体现项目概要、主体展开、问题应对和总结收尾等论文结构块。",
                 suggestion="建议按“项目背景与角色-主论点概述-分论点过程-问题与应对-成果与总结”重组全文。",
@@ -336,6 +350,12 @@ class EssayReviewer:
         action_phrases = ["我组织", "我制定", "我协调", "我推动", "我跟踪", "我安排", "我主持", "我带领", "我分析", "我复盘"]
         return sum(text.count(token) for token in action_phrases)
 
+    def _group_issues(self, issues: list[Issue]) -> tuple[list[Issue], list[Issue], list[Issue]]:
+        must_fix = [item for item in issues if item.action_priority == "must"]
+        should_fix = [item for item in issues if item.action_priority == "should"]
+        could_improve = [item for item in issues if item.action_priority == "could"]
+        return must_fix, should_fix, could_improve
+
     def _topic_specific_issues(self, context: ReviewContext) -> list[Issue]:
         issue_builders = {
             "scope_management": self._scope_issues,
@@ -360,6 +380,7 @@ class EssayReviewer:
         if "需求跟踪矩阵" not in text:
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="范围题缺少需求跟踪矩阵",
                 details="范围管理题通常要求写出核心范围对应的需求跟踪矩阵，当前正文未明显体现。",
                 suggestion="在收集需求或定义范围部分补充需求跟踪矩阵字段，并至少举 2 个核心需求的跟踪示例。",
@@ -367,6 +388,7 @@ class EssayReviewer:
         if "WBS" not in text:
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="范围题缺少 WBS 响应",
                 details="范围管理题常要求给出与项目一致的 WBS，当前未明显出现。",
                 suggestion="在创建 WBS 段写出分解原则、层级和主要可交付成果，必要时补充树状结构说明。",
@@ -374,6 +396,7 @@ class EssayReviewer:
         if not any(token in text for token in ["确认范围", "控制范围"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="should",
                 title="范围题后段过程展开不足",
                 details="正文更偏前期需求和范围定义，确认范围、控制范围的叙述不够。",
                 suggestion="补充验收、范围变更、范围蔓延控制和干系人确认的做法。",
@@ -386,6 +409,7 @@ class EssayReviewer:
         if "甘特图" not in text and "进度计划" not in text:
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="进度题缺少进度计划产物",
                 details="进度管理题通常要求体现甘特图或对应进度计划，当前未明确响应。",
                 suggestion="补充主要阶段、里程碑、持续时间和前后依赖关系，并说明进度计划如何形成。",
@@ -393,6 +417,7 @@ class EssayReviewer:
         if not any(token in text for token in ["延期", "延迟", "赶工", "快速跟进", "关键路径"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="进度题缺少延期处理",
                 details="正文没有明显回应进度偏差或延期时的处理办法。",
                 suggestion="补充进度延迟场景，并写出赶工、快速跟进、资源调整或范围协商等纠偏措施。",
@@ -405,6 +430,7 @@ class EssayReviewer:
         if not any(token in text for token in ["预算形成", "预算", "成本基准", "资金"]):
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="成本题缺少预算形成过程",
                 details="成本管理题的核心之一是预算形成和成本基准，当前表达不足。",
                 suggestion="补充成本估算、汇总形成预算、管理储备和成本基准确定过程。",
@@ -412,6 +438,7 @@ class EssayReviewer:
         if not any(token in text for token in ["挣值", "偏差", "S曲线", "成本控制"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="should",
                 title="成本题控制手段偏弱",
                 details="正文缺少成本监控和偏差分析的具体方法。",
                 suggestion="补充挣值分析、成本偏差、趋势分析或 S 曲线等控制手段，并说明如何纠偏。",
@@ -424,6 +451,7 @@ class EssayReviewer:
         if "质量保证" not in text:
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="质量题缺少质量保证展开",
                 details="质量管理题通常会重点考查质量保证，当前正文未明显展开。",
                 suggestion="单独写质量保证段，说明评审、过程审计、QA 介入、制度落实等动作。",
@@ -431,6 +459,7 @@ class EssayReviewer:
         if "核对单" not in text:
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="质量题缺少质量核对单",
                 details="当前没有明显体现质量核对单或检查项。",
                 suggestion="补充质量核对单的关键字段或重点检查项，如需求评审、测试覆盖、缺陷关闭、发布准入等。",
@@ -443,6 +472,7 @@ class EssayReviewer:
         if "风险登记册" not in text:
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="风险题缺少风险登记册",
                 details="风险管理题一般要求写出风险登记册及其逐步完善过程，当前未明显体现。",
                 suggestion="补充风险登记册字段，如风险描述、原因、概率、影响、责任人、应对措施和状态。",
@@ -450,6 +480,7 @@ class EssayReviewer:
         if not any(token in text for token in ["定性", "概率", "影响矩阵"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="风险题缺少定性分析",
                 details="正文未明显体现对风险进行概率-影响判断或排序。",
                 suggestion="补充定性分析方法，如概率影响矩阵、紧迫性标识或优先级排序。",
@@ -457,6 +488,7 @@ class EssayReviewer:
         if not any(token in text for token in ["定量", "建模", "模拟", "储备"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="should",
                 title="风险题缺少定量或储备思路",
                 details="风险题深度部分通常需要写定量分析、储备或多方案应对，当前偏弱。",
                 suggestion="补充定量分析、进度/成本储备、B 计划或关键风险量化例子。",
@@ -469,6 +501,7 @@ class EssayReviewer:
         if not any(token in text for token in ["权力/利益方格", "权力", "利益方格"]):
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="干系人题缺少权力/利益分析",
                 details="干系人管理题高频要求对干系人按权力/利益进行分类分析，当前未明显体现。",
                 suggestion="列出关键干系人，按权力/利益方格分类，并给出差异化管理策略。",
@@ -476,6 +509,7 @@ class EssayReviewer:
         if not any(token in text for token in ["沟通管理", "需求管理", "区别", "联系"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="干系人题对子问响应不足",
                 details="正文没有明显回应干系人管理与沟通管理、需求管理的联系和区别。",
                 suggestion="单独补一段比较三者关系，说明对象、目标和管理重点的差异。",
@@ -488,6 +522,7 @@ class EssayReviewer:
         if not any(token in text for token in ["索赔流程", "索赔", "监理"]):
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="合同题缺少索赔流程",
                 details="合同管理题常要求在有监理参与情况下描述索赔流程，当前未明确响应。",
                 suggestion="补充变更提出、监理审查、审批、通知和实施等索赔或变更流程。",
@@ -495,6 +530,7 @@ class EssayReviewer:
         if not any(token in text for token in ["合同条款", "付款", "违约", "验收条款"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="合同题主要条款内容不足",
                 details="正文未明显体现合同主要条款结构。",
                 suggestion="补充范围、工期、质量、付款、验收、违约责任和变更条款等主要内容。",
@@ -507,6 +543,7 @@ class EssayReviewer:
         if not any(token in text for token in ["业务目标", "价值", "收益兑现", "收益"]):
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="交付绩效域缺少业务价值表达",
                 details="交付绩效域重点是成果和业务目标一致，当前价值表达不足。",
                 suggestion="补充项目交付物如何支撑业务目标、预期收益和最终实现效果。",
@@ -514,6 +551,7 @@ class EssayReviewer:
         if not any(token in text for token in ["协同", "其他绩效域", "过程组"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="交付绩效域缺少协同关系",
                 details="正文未明显回应交付绩效域与其他绩效域或过程组的协同。",
                 suggestion="补充启动、规划、执行、监控、收尾各阶段与干系人、规划、工作、不确定性等绩效域的协同目标。",
@@ -521,6 +559,7 @@ class EssayReviewer:
         if not any(token in text for token in ["测量指标", "指标", "满意度", "验收标准"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="交付绩效域缺少测量指标",
                 details="题目往往要求给出交付绩效域测量指标，当前未充分体现。",
                 suggestion="补充需求稳定性、验收通过率、缺陷数、满意度、收益实现率等指标。",
@@ -533,6 +572,7 @@ class EssayReviewer:
         if not any(token in text for token in ["模糊性", "复杂性", "风险"]):
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="不确定性绩效域要素覆盖不足",
                 details="正文没有完整体现风险、模糊性和复杂性这几个不确定性来源。",
                 suggestion="明确区分风险、模糊性、复杂性，并分别写识别和应对方式。",
@@ -540,6 +580,7 @@ class EssayReviewer:
         if not any(token in text for token in ["其他7个绩效域", "相关关系", "干系人绩效域", "团队绩效域"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="不确定性绩效域缺少与其他绩效域关系",
                 details="题目常要求描述与其他绩效域的相互作用，当前未明显响应。",
                 suggestion="补充不确定性与干系人、团队、规划、工作、交付、度量等绩效域的关系。",
@@ -547,6 +588,7 @@ class EssayReviewer:
         if not any(token in text for token in ["储备", "机会", "威胁", "B计划"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="should",
                 title="不确定性应对策略偏弱",
                 details="正文缺少储备、机会利用或备选方案等高级应对策略。",
                 suggestion="补充管理储备、应急储备、机会利用和备选方案设计。",
@@ -559,6 +601,7 @@ class EssayReviewer:
         if not any(token in text for token in ["度量指标", "KPI", "指标"]):
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="度量绩效域缺少指标体系",
                 details="度量绩效域核心是建立有效指标，当前未形成清晰指标体系。",
                 suggestion="列出计划值、实际值、阈值、预警值和展示方式，说明如何服务决策。",
@@ -566,6 +609,7 @@ class EssayReviewer:
         if not any(token in text for token in ["预测", "预警", "偏差分析", "趋势分析"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="度量绩效域缺少诊断与预警",
                 details="正文未明显体现基于度量结果进行诊断和行动。",
                 suggestion="补充偏差分析、趋势分析、预警阈值和基于数据的纠偏动作。",
@@ -578,6 +622,7 @@ class EssayReviewer:
         if "项目管理计划" not in text:
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="规划绩效域缺少项目管理计划主线",
                 details="规划绩效域应围绕项目管理计划及其子计划展开，当前主线不清楚。",
                 suggestion="按范围、进度、成本、资源、沟通、采购、变更和度量等规划内容组织正文。",
@@ -585,6 +630,7 @@ class EssayReviewer:
         if not any(token in text for token in ["基准", "估算", "滚动式规划", "变更控制"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="must",
                 title="规划绩效域关键抓手不足",
                 details="正文缺少基准、估算、规划调整和变更控制等规划抓手。",
                 suggestion="补充基准建立、估算方法、滚动式规划和变更控制机制。",
@@ -597,6 +643,7 @@ class EssayReviewer:
         if not any(token in text for token in ["状态报告", "过程审计", "资源利用率", "变更日志"]):
             issues.append(Issue(
                 severity="high",
+                action_priority="must",
                 title="工作绩效域缺少执行监控抓手",
                 details="工作绩效域重点是执行中的过程、资源、采购、沟通和变更控制，当前缺少监控抓手。",
                 suggestion="补充状态报告、过程审计、资源利用率、采购审计、变更日志等执行监控机制。",
@@ -604,6 +651,7 @@ class EssayReviewer:
         if not any(token in text for token in ["持续改进", "经验教训", "知识管理", "学习"]):
             issues.append(Issue(
                 severity="medium",
+                action_priority="should",
                 title="工作绩效域缺少持续改进",
                 details="正文未明显体现学习、复盘和持续改进。",
                 suggestion="补充经验教训沉淀、复盘机制和流程优化动作。",

@@ -16,6 +16,7 @@ class CriterionScore:
 @dataclass
 class Issue:
     severity: Literal["high", "medium", "low"]
+    action_priority: Literal["must", "should", "could"]
     title: str
     details: str
     suggestion: str
@@ -49,6 +50,9 @@ class ReviewResult:
     summary: str
     dimensions: list[CriterionScore]
     issues: list[Issue]
+    must_fix: list[Issue]
+    should_fix: list[Issue]
+    could_improve: list[Issue]
     paragraph_reviews: list[ParagraphReview]
     suggested_report_name: str
 
