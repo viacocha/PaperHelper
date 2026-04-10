@@ -1,0 +1,156 @@
+{
+  "subject": "信息系统项目管理师",
+  "version": "paperhelper-v1",
+  "total_score": 75,
+  "pass_score": 45,
+  "shared": {
+    "required_sections": [
+      "project_summary",
+      "main_argument",
+      "body",
+      "conclusion"
+    ],
+    "core_checks": [
+      "has_real_project_background",
+      "has_role_statement",
+      "covers_question_points",
+      "has_problem_solution_result_loop",
+      "has_summary_and_outcome"
+    ],
+    "min_words": 2000,
+    "max_words": 3500,
+    "recommended_words": 2500
+  },
+  "standards": [
+    {
+      "id": "scope_management",
+      "name": "范围管理",
+      "category": "knowledge_area",
+      "aliases": ["范围管理", "项目范围管理", "scope"],
+      "keywords": ["范围", "需求", "WBS", "需求跟踪矩阵", "确认范围", "控制范围"],
+      "required_processes": ["规划范围管理", "收集需求", "定义范围", "创建WBS", "确认范围", "控制范围"],
+      "required_artifacts": ["需求跟踪矩阵", "WBS"],
+      "question_points": ["项目范围管理的过程", "需求跟踪矩阵", "WBS", "心得体会"]
+    },
+    {
+      "id": "schedule_management",
+      "name": "进度管理",
+      "category": "knowledge_area",
+      "aliases": ["进度管理", "项目进度管理", "schedule"],
+      "keywords": ["进度", "甘特图", "里程碑", "工期", "延期", "关键路径"],
+      "required_processes": ["规划进度管理", "定义活动", "排列活动顺序", "估算活动持续时间", "制定进度计划", "控制进度"],
+      "required_artifacts": ["甘特图", "进度计划"],
+      "question_points": ["项目进度管理的过程", "延期处理", "进度计划", "心得体会"]
+    },
+    {
+      "id": "cost_management",
+      "name": "成本管理",
+      "category": "knowledge_area",
+      "aliases": ["成本管理", "项目成本管理", "cost"],
+      "keywords": ["成本", "预算", "成本基准", "S曲线", "挣值"],
+      "required_processes": ["规划成本管理", "估算成本", "制定预算", "控制成本"],
+      "required_artifacts": ["预算", "成本基准"],
+      "question_points": ["项目成本管理的过程", "预算形成过程", "控制成本", "心得体会"]
+    },
+    {
+      "id": "quality_management",
+      "name": "质量管理",
+      "category": "knowledge_area",
+      "aliases": ["质量管理", "项目质量管理", "quality"],
+      "keywords": ["质量", "质量保证", "质量控制", "核对单", "测试", "缺陷"],
+      "required_processes": ["规划质量管理", "管理质量", "控制质量"],
+      "required_artifacts": ["质量核对单", "质量标准"],
+      "question_points": ["项目质量管理的过程", "质量保证", "质量核对单", "心得体会"]
+    },
+    {
+      "id": "risk_management",
+      "name": "风险管理",
+      "category": "knowledge_area",
+      "aliases": ["风险管理", "项目风险管理", "risk"],
+      "keywords": ["风险", "风险登记册", "定性分析", "定量分析", "应对", "RBS"],
+      "required_processes": ["规划风险管理", "识别风险", "实施定性风险分析", "实施定量风险分析", "规划风险应对", "实施风险应对", "监督风险"],
+      "required_artifacts": ["风险登记册"],
+      "question_points": ["风险识别", "风险应对", "风险登记册", "逐步完善", "心得体会"]
+    },
+    {
+      "id": "stakeholder_management",
+      "name": "干系人管理",
+      "category": "knowledge_area",
+      "aliases": ["干系人管理", "项目干系人管理", "stakeholder"],
+      "keywords": ["干系人", "权力", "利益", "参与度", "沟通", "满意度"],
+      "required_processes": ["识别干系人", "规划干系人参与", "管理干系人参与", "监督干系人参与"],
+      "required_artifacts": ["权力/利益方格", "干系人参与度评估矩阵"],
+      "question_points": ["项目干系人管理的过程", "与沟通和需求的联系区别", "权力/利益方格", "心得体会"]
+    },
+    {
+      "id": "resource_management",
+      "name": "资源管理",
+      "category": "knowledge_area",
+      "aliases": ["资源管理", "项目资源管理", "resource"],
+      "keywords": ["资源", "团队", "获取资源", "实物资源", "资源分解结构"],
+      "required_processes": ["规划资源管理", "估算活动资源", "获取资源", "建设团队", "管理团队", "控制资源"],
+      "required_artifacts": ["资源管理计划"],
+      "question_points": ["资源获取和管理", "人力与实物资源", "控制区别", "心得体会"]
+    },
+    {
+      "id": "contract_management",
+      "name": "合同管理",
+      "category": "knowledge_area",
+      "aliases": ["合同管理", "项目合同管理", "contract"],
+      "keywords": ["合同", "索赔", "监理", "条款", "合同变更"],
+      "required_processes": ["合同签订管理", "合同履行管理", "合同变更管理", "合同档案管理", "违约索赔管理"],
+      "required_artifacts": ["合同条款", "索赔流程"],
+      "question_points": ["项目合同管理的过程", "索赔流程", "主要条款内容", "心得体会"]
+    },
+    {
+      "id": "planning_performance_domain",
+      "name": "规划绩效域",
+      "category": "performance_domain",
+      "aliases": ["规划绩效域", "planning performance domain"],
+      "keywords": ["规划绩效域", "规划", "基准", "估算", "变更控制", "滚动式规划"],
+      "required_processes": ["规划影响因素", "项目估算", "团队和结构规划", "沟通规划", "实物资源规划", "采购规划", "变更规划", "度量指标规划"],
+      "required_artifacts": ["项目管理计划", "基准"],
+      "question_points": ["绩效要点", "预期目标", "重点管理内容", "心得体会"]
+    },
+    {
+      "id": "work_performance_domain",
+      "name": "工作绩效域",
+      "category": "performance_domain",
+      "aliases": ["工作绩效域", "项目工作绩效域"],
+      "keywords": ["工作绩效域", "项目过程", "制约因素", "沟通", "采购", "持续改进"],
+      "required_processes": ["项目过程", "项目制约因素", "工作过程和能力", "沟通和参与", "实物资源管理", "采购事项", "新工作和变更", "学习与持续改进"],
+      "required_artifacts": ["状态报告", "变更日志"],
+      "question_points": ["绩效要点", "重点管理的工作绩效", "具体做法", "心得体会"]
+    },
+    {
+      "id": "delivery_performance_domain",
+      "name": "交付绩效域",
+      "category": "performance_domain",
+      "aliases": ["交付绩效域", "项目交付绩效域"],
+      "keywords": ["交付绩效域", "业务价值", "验收", "交付物", "满意度", "收益"],
+      "required_processes": ["价值交付", "可交付物管理", "质量保证", "需求理解", "验收和满意度"],
+      "required_artifacts": ["测量指标", "验收标准"],
+      "question_points": ["重点关注方面", "与其他绩效域协同", "各过程组测量指标", "心得体会"]
+    },
+    {
+      "id": "uncertainty_performance_domain",
+      "name": "不确定性绩效域",
+      "category": "performance_domain",
+      "aliases": ["不确定性绩效域", "项目不确定性绩效域"],
+      "keywords": ["不确定性绩效域", "模糊性", "复杂性", "机会", "威胁", "储备"],
+      "required_processes": ["环境分析", "识别不确定性", "分析和排序", "规划和执行应对", "跟踪和控制"],
+      "required_artifacts": ["风险应对方案", "储备策略"],
+      "question_points": ["预期目标", "与其他绩效域关系", "不确定性及应对方法", "心得体会"]
+    },
+    {
+      "id": "measurement_performance_domain",
+      "name": "度量绩效域",
+      "category": "performance_domain",
+      "aliases": ["度量绩效域", "项目度量绩效域"],
+      "keywords": ["度量绩效域", "指标", "预测", "预警", "状态报告", "偏差分析"],
+      "required_processes": ["制定指标", "收集和展示结果", "诊断", "采取行动", "持续改进"],
+      "required_artifacts": ["度量指标", "状态报告"],
+      "question_points": ["有效的度量指标", "展示度量结果", "基于度量进行诊断", "心得体会"]
+    }
+  ]
+}
