@@ -211,6 +211,7 @@ class EssayReviewer:
                 suggestion="建议按“项目背景与角色-主论点概述-分论点过程-问题与应对-成果与总结”重组全文。",
             ))
 
+        issues.extend(self._topic_specific_issues(context))
         return issues
 
     def _review_paragraphs(self, context: ReviewContext) -> list[ParagraphReview]:
@@ -334,3 +335,277 @@ class EssayReviewer:
     def _first_person_action_count(self, text: str) -> int:
         action_phrases = ["我组织", "我制定", "我协调", "我推动", "我跟踪", "我安排", "我主持", "我带领", "我分析", "我复盘"]
         return sum(text.count(token) for token in action_phrases)
+
+    def _topic_specific_issues(self, context: ReviewContext) -> list[Issue]:
+        issue_builders = {
+            "scope_management": self._scope_issues,
+            "schedule_management": self._schedule_issues,
+            "cost_management": self._cost_issues,
+            "quality_management": self._quality_issues,
+            "risk_management": self._risk_issues,
+            "stakeholder_management": self._stakeholder_issues,
+            "contract_management": self._contract_issues,
+            "delivery_performance_domain": self._delivery_issues,
+            "uncertainty_performance_domain": self._uncertainty_issues,
+            "measurement_performance_domain": self._measurement_issues,
+            "planning_performance_domain": self._planning_issues,
+            "work_performance_domain": self._work_pd_issues,
+        }
+        builder = issue_builders.get(context.standard.id)
+        return builder(context) if builder else []
+
+    def _scope_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if "需求跟踪矩阵" not in text:
+            issues.append(Issue(
+                severity="high",
+                title="范围题缺少需求跟踪矩阵",
+                details="范围管理题通常要求写出核心范围对应的需求跟踪矩阵，当前正文未明显体现。",
+                suggestion="在收集需求或定义范围部分补充需求跟踪矩阵字段，并至少举 2 个核心需求的跟踪示例。",
+            ))
+        if "WBS" not in text:
+            issues.append(Issue(
+                severity="high",
+                title="范围题缺少 WBS 响应",
+                details="范围管理题常要求给出与项目一致的 WBS，当前未明显出现。",
+                suggestion="在创建 WBS 段写出分解原则、层级和主要可交付成果，必要时补充树状结构说明。",
+            ))
+        if not any(token in text for token in ["确认范围", "控制范围"]):
+            issues.append(Issue(
+                severity="medium",
+                title="范围题后段过程展开不足",
+                details="正文更偏前期需求和范围定义，确认范围、控制范围的叙述不够。",
+                suggestion="补充验收、范围变更、范围蔓延控制和干系人确认的做法。",
+            ))
+        return issues
+
+    def _schedule_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if "甘特图" not in text and "进度计划" not in text:
+            issues.append(Issue(
+                severity="high",
+                title="进度题缺少进度计划产物",
+                details="进度管理题通常要求体现甘特图或对应进度计划，当前未明确响应。",
+                suggestion="补充主要阶段、里程碑、持续时间和前后依赖关系，并说明进度计划如何形成。",
+            ))
+        if not any(token in text for token in ["延期", "延迟", "赶工", "快速跟进", "关键路径"]):
+            issues.append(Issue(
+                severity="medium",
+                title="进度题缺少延期处理",
+                details="正文没有明显回应进度偏差或延期时的处理办法。",
+                suggestion="补充进度延迟场景，并写出赶工、快速跟进、资源调整或范围协商等纠偏措施。",
+            ))
+        return issues
+
+    def _cost_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if not any(token in text for token in ["预算形成", "预算", "成本基准", "资金"]):
+            issues.append(Issue(
+                severity="high",
+                title="成本题缺少预算形成过程",
+                details="成本管理题的核心之一是预算形成和成本基准，当前表达不足。",
+                suggestion="补充成本估算、汇总形成预算、管理储备和成本基准确定过程。",
+            ))
+        if not any(token in text for token in ["挣值", "偏差", "S曲线", "成本控制"]):
+            issues.append(Issue(
+                severity="medium",
+                title="成本题控制手段偏弱",
+                details="正文缺少成本监控和偏差分析的具体方法。",
+                suggestion="补充挣值分析、成本偏差、趋势分析或 S 曲线等控制手段，并说明如何纠偏。",
+            ))
+        return issues
+
+    def _quality_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if "质量保证" not in text:
+            issues.append(Issue(
+                severity="high",
+                title="质量题缺少质量保证展开",
+                details="质量管理题通常会重点考查质量保证，当前正文未明显展开。",
+                suggestion="单独写质量保证段，说明评审、过程审计、QA 介入、制度落实等动作。",
+            ))
+        if "核对单" not in text:
+            issues.append(Issue(
+                severity="medium",
+                title="质量题缺少质量核对单",
+                details="当前没有明显体现质量核对单或检查项。",
+                suggestion="补充质量核对单的关键字段或重点检查项，如需求评审、测试覆盖、缺陷关闭、发布准入等。",
+            ))
+        return issues
+
+    def _risk_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if "风险登记册" not in text:
+            issues.append(Issue(
+                severity="high",
+                title="风险题缺少风险登记册",
+                details="风险管理题一般要求写出风险登记册及其逐步完善过程，当前未明显体现。",
+                suggestion="补充风险登记册字段，如风险描述、原因、概率、影响、责任人、应对措施和状态。",
+            ))
+        if not any(token in text for token in ["定性", "概率", "影响矩阵"]):
+            issues.append(Issue(
+                severity="medium",
+                title="风险题缺少定性分析",
+                details="正文未明显体现对风险进行概率-影响判断或排序。",
+                suggestion="补充定性分析方法，如概率影响矩阵、紧迫性标识或优先级排序。",
+            ))
+        if not any(token in text for token in ["定量", "建模", "模拟", "储备"]):
+            issues.append(Issue(
+                severity="medium",
+                title="风险题缺少定量或储备思路",
+                details="风险题深度部分通常需要写定量分析、储备或多方案应对，当前偏弱。",
+                suggestion="补充定量分析、进度/成本储备、B 计划或关键风险量化例子。",
+            ))
+        return issues
+
+    def _stakeholder_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if not any(token in text for token in ["权力/利益方格", "权力", "利益方格"]):
+            issues.append(Issue(
+                severity="high",
+                title="干系人题缺少权力/利益分析",
+                details="干系人管理题高频要求对干系人按权力/利益进行分类分析，当前未明显体现。",
+                suggestion="列出关键干系人，按权力/利益方格分类，并给出差异化管理策略。",
+            ))
+        if not any(token in text for token in ["沟通管理", "需求管理", "区别", "联系"]):
+            issues.append(Issue(
+                severity="medium",
+                title="干系人题对子问响应不足",
+                details="正文没有明显回应干系人管理与沟通管理、需求管理的联系和区别。",
+                suggestion="单独补一段比较三者关系，说明对象、目标和管理重点的差异。",
+            ))
+        return issues
+
+    def _contract_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if not any(token in text for token in ["索赔流程", "索赔", "监理"]):
+            issues.append(Issue(
+                severity="high",
+                title="合同题缺少索赔流程",
+                details="合同管理题常要求在有监理参与情况下描述索赔流程，当前未明确响应。",
+                suggestion="补充变更提出、监理审查、审批、通知和实施等索赔或变更流程。",
+            ))
+        if not any(token in text for token in ["合同条款", "付款", "违约", "验收条款"]):
+            issues.append(Issue(
+                severity="medium",
+                title="合同题主要条款内容不足",
+                details="正文未明显体现合同主要条款结构。",
+                suggestion="补充范围、工期、质量、付款、验收、违约责任和变更条款等主要内容。",
+            ))
+        return issues
+
+    def _delivery_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if not any(token in text for token in ["业务目标", "价值", "收益兑现", "收益"]):
+            issues.append(Issue(
+                severity="high",
+                title="交付绩效域缺少业务价值表达",
+                details="交付绩效域重点是成果和业务目标一致，当前价值表达不足。",
+                suggestion="补充项目交付物如何支撑业务目标、预期收益和最终实现效果。",
+            ))
+        if not any(token in text for token in ["协同", "其他绩效域", "过程组"]):
+            issues.append(Issue(
+                severity="medium",
+                title="交付绩效域缺少协同关系",
+                details="正文未明显回应交付绩效域与其他绩效域或过程组的协同。",
+                suggestion="补充启动、规划、执行、监控、收尾各阶段与干系人、规划、工作、不确定性等绩效域的协同目标。",
+            ))
+        if not any(token in text for token in ["测量指标", "指标", "满意度", "验收标准"]):
+            issues.append(Issue(
+                severity="medium",
+                title="交付绩效域缺少测量指标",
+                details="题目往往要求给出交付绩效域测量指标，当前未充分体现。",
+                suggestion="补充需求稳定性、验收通过率、缺陷数、满意度、收益实现率等指标。",
+            ))
+        return issues
+
+    def _uncertainty_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if not any(token in text for token in ["模糊性", "复杂性", "风险"]):
+            issues.append(Issue(
+                severity="high",
+                title="不确定性绩效域要素覆盖不足",
+                details="正文没有完整体现风险、模糊性和复杂性这几个不确定性来源。",
+                suggestion="明确区分风险、模糊性、复杂性，并分别写识别和应对方式。",
+            ))
+        if not any(token in text for token in ["其他7个绩效域", "相关关系", "干系人绩效域", "团队绩效域"]):
+            issues.append(Issue(
+                severity="medium",
+                title="不确定性绩效域缺少与其他绩效域关系",
+                details="题目常要求描述与其他绩效域的相互作用，当前未明显响应。",
+                suggestion="补充不确定性与干系人、团队、规划、工作、交付、度量等绩效域的关系。",
+            ))
+        if not any(token in text for token in ["储备", "机会", "威胁", "B计划"]):
+            issues.append(Issue(
+                severity="medium",
+                title="不确定性应对策略偏弱",
+                details="正文缺少储备、机会利用或备选方案等高级应对策略。",
+                suggestion="补充管理储备、应急储备、机会利用和备选方案设计。",
+            ))
+        return issues
+
+    def _measurement_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if not any(token in text for token in ["度量指标", "KPI", "指标"]):
+            issues.append(Issue(
+                severity="high",
+                title="度量绩效域缺少指标体系",
+                details="度量绩效域核心是建立有效指标，当前未形成清晰指标体系。",
+                suggestion="列出计划值、实际值、阈值、预警值和展示方式，说明如何服务决策。",
+            ))
+        if not any(token in text for token in ["预测", "预警", "偏差分析", "趋势分析"]):
+            issues.append(Issue(
+                severity="medium",
+                title="度量绩效域缺少诊断与预警",
+                details="正文未明显体现基于度量结果进行诊断和行动。",
+                suggestion="补充偏差分析、趋势分析、预警阈值和基于数据的纠偏动作。",
+            ))
+        return issues
+
+    def _planning_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if "项目管理计划" not in text:
+            issues.append(Issue(
+                severity="high",
+                title="规划绩效域缺少项目管理计划主线",
+                details="规划绩效域应围绕项目管理计划及其子计划展开，当前主线不清楚。",
+                suggestion="按范围、进度、成本、资源、沟通、采购、变更和度量等规划内容组织正文。",
+            ))
+        if not any(token in text for token in ["基准", "估算", "滚动式规划", "变更控制"]):
+            issues.append(Issue(
+                severity="medium",
+                title="规划绩效域关键抓手不足",
+                details="正文缺少基准、估算、规划调整和变更控制等规划抓手。",
+                suggestion="补充基准建立、估算方法、滚动式规划和变更控制机制。",
+            ))
+        return issues
+
+    def _work_pd_issues(self, context: ReviewContext) -> list[Issue]:
+        text = context.parsed.text
+        issues: list[Issue] = []
+        if not any(token in text for token in ["状态报告", "过程审计", "资源利用率", "变更日志"]):
+            issues.append(Issue(
+                severity="high",
+                title="工作绩效域缺少执行监控抓手",
+                details="工作绩效域重点是执行中的过程、资源、采购、沟通和变更控制，当前缺少监控抓手。",
+                suggestion="补充状态报告、过程审计、资源利用率、采购审计、变更日志等执行监控机制。",
+            ))
+        if not any(token in text for token in ["持续改进", "经验教训", "知识管理", "学习"]):
+            issues.append(Issue(
+                severity="medium",
+                title="工作绩效域缺少持续改进",
+                details="正文未明显体现学习、复盘和持续改进。",
+                suggestion="补充经验教训沉淀、复盘机制和流程优化动作。",
+            ))
+        return issues
