@@ -29,6 +29,14 @@ export type ParagraphReview = {
   suggestions: string[];
 };
 
+export type RevisionTemplate = {
+  title: string;
+  purpose: string;
+  when_to_use: string;
+  outline: string[];
+  sample: string;
+};
+
 export type ReviewResult = {
   filename: string;
   standard: {
@@ -46,6 +54,7 @@ export type ReviewResult = {
   must_fix: Issue[];
   should_fix: Issue[];
   could_improve: Issue[];
+  revision_templates: RevisionTemplate[];
   paragraph_reviews: ParagraphReview[];
   suggested_report_name: string;
 };

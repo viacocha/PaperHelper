@@ -33,6 +33,15 @@ class ParagraphReview:
 
 
 @dataclass
+class RevisionTemplate:
+    title: str
+    purpose: str
+    when_to_use: str
+    outline: list[str]
+    sample: str
+
+
+@dataclass
 class StandardMatch:
     standard_id: str
     standard_name: str
@@ -53,6 +62,7 @@ class ReviewResult:
     must_fix: list[Issue]
     should_fix: list[Issue]
     could_improve: list[Issue]
+    revision_templates: list[RevisionTemplate]
     paragraph_reviews: list[ParagraphReview]
     suggested_report_name: str
 

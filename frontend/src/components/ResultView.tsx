@@ -74,6 +74,21 @@ export function ResultView({ review }: ResultViewProps) {
       </div>
 
       <div className="panel">
+        <h3>题型模板建议</h3>
+        <div className="template-list">
+          {review.revision_templates.map((item, index) => (
+            <article key={`${item.title}-${index}`} className="template-card">
+              <h4>{item.title}</h4>
+              <p>用途：{item.purpose}</p>
+              <p>适用场景：{item.when_to_use}</p>
+              <p>补写结构：{item.outline.join("；")}</p>
+              <p>示例写法：{item.sample}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel">
         <h3>逐段建议</h3>
         <div className="paragraph-list">
           {review.paragraph_reviews.map((item) => (

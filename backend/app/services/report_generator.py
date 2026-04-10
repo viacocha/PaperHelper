@@ -41,7 +41,15 @@ def generate_report(review: ReviewResult, output_path: Path) -> Path:
     _add_issue_group(document, "建议补强", review.should_fix)
     _add_issue_group(document, "可优化项", review.could_improve)
 
-    _add_heading(document, "五、逐段建议")
+    _add_heading(document, "五、题型模板建议")
+    for item in review.revision_templates:
+        document.add_paragraph(item.title).runs[0].bold = True
+        document.add_paragraph("用途：" + item.purpose)
+        document.add_paragraph("适用场景：" + item.when_to_use)
+        document.add_paragraph("补写结构：" + "；".join(item.outline))
+        document.add_paragraph("示例写法：" + item.sample)
+
+    _add_heading(document, "六、逐段建议")
     for paragraph_review in review.paragraph_reviews:
         document.add_paragraph(f"第 {paragraph_review.index} 段：{paragraph_review.excerpt}", style="List Bullet")
         if paragraph_review.strengths:
@@ -51,7 +59,7 @@ def generate_report(review: ReviewResult, output_path: Path) -> Path:
         if paragraph_review.suggestions:
             document.add_paragraph("建议：" + "；".join(paragraph_review.suggestions))
 
-    _add_heading(document, "六、修改顺序建议")
+    _add_heading(document, "七、修改顺序建议")
     priorities = [
         "先补齐题目要求的子问、专属产物和关键过程。",
         "再强化项目经理视角、问题应对和结果成效。",

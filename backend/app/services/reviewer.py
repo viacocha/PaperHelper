@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.models.schemas import CriterionScore, Issue, ParagraphReview, ReviewResult, StandardMatch
+from app.models.schemas import CriterionScore, Issue, ParagraphReview, RevisionTemplate, ReviewResult, StandardMatch
 from app.services.parser import ParsedEssay, parse_docx
 from app.services.standards import Standard, StandardLibrary, load_standard_library
 
@@ -44,6 +44,7 @@ class EssayReviewer:
         dimensions = self._score_dimensions(context)
         issues = self._collect_issues(context)
         must_fix, should_fix, could_improve = self._group_issues(issues)
+        revision_templates = self._build_revision_templates(context, must_fix, should_fix)
         paragraph_reviews = self._review_paragraphs(context)
         raw_total = sum(item.score for item in dimensions)
         total_score = round(self._apply_total_adjustments(raw_total, context, issues), 1)
@@ -66,6 +67,7 @@ class EssayReviewer:
             must_fix=must_fix,
             should_fix=should_fix,
             could_improve=could_improve,
+            revision_templates=revision_templates,
             paragraph_reviews=paragraph_reviews,
             suggested_report_name=report_name,
         )
@@ -373,6 +375,175 @@ class EssayReviewer:
         }
         builder = issue_builders.get(context.standard.id)
         return builder(context) if builder else []
+
+    def _build_revision_templates(
+        self,
+        context: ReviewContext,
+        must_fix: list[Issue],
+        should_fix: list[Issue],
+    ) -> list[RevisionTemplate]:
+        builders = {
+            "scope_management": self._scope_templates,
+            "risk_management": self._risk_templates,
+            "quality_management": self._quality_templates,
+            "schedule_management": self._schedule_templates,
+            "delivery_performance_domain": self._delivery_templates,
+            "uncertainty_performance_domain": self._uncertainty_templates,
+        }
+        base_templates = self._generic_templates(context)
+        topic_templates = builders.get(context.standard.id, lambda _context: [])(context)
+
+        limit = 4 if must_fix else 3
+        templates = base_templates + topic_templates
+        return templates[:limit]
+
+    def _generic_templates(self, context: ReviewContext) -> list[RevisionTemplate]:
+        return [
+            RevisionTemplate(
+                title="项目背景与角色补写模板",
+                purpose="补齐论文开头最核心的项目真实性和管理者视角。",
+                when_to_use="缺少项目背景、本人职责、项目规模或验收结果时使用。",
+                outline=[
+                    "项目发起背景、建设目标、合同金额或总投资",
+                    "建设周期、主要模块、组织结构、交付成果",
+                    "本人担任乙方项目经理，负责启动、规划、执行、监控和收尾",
+                    "用一句话引出本文将围绕当前题型展开"
+                ],
+                sample="我于2025年3月担任某市智慧监管平台建设项目的乙方项目经理，项目合同金额820万元，建设周期11个月，采用强矩阵组织结构，交付内容包括统一门户、业务办理、数据交换和统计分析等模块。我负责项目启动、范围规划、进度控制、质量协调和验收交付。下面结合该项目，论述我在当前题型中的具体管理实践。"
+            ),
+            RevisionTemplate(
+                title="问题-措施-结果段落模板",
+                purpose="把空泛理论段改成阅卷老师更容易给分的实战段。",
+                when_to_use="某一段只有概念，没有问题、动作和结果时使用。",
+                outline=[
+                    "先交代项目中出现的具体问题或风险",
+                    "再写本人采取的管理措施和使用的工具文档",
+                    "补充执行频率、责任人、会议或评审机制",
+                    "结尾写最终效果、验收结果或偏差收敛情况"
+                ],
+                sample="在项目实施过程中，由于甲方多个业务部门口径不一致，需求反复变化，导致交付边界一度不清。为此，我组织召开了专题需求澄清会，并结合需求跟踪矩阵逐项确认需求来源、责任人和验收标准。同时我要求团队每周更新问题清单，双周进行一次范围评审。经过以上措施，需求变更率明显下降，后续验收工作也更加顺畅。"
+            )
+        ]
+
+    def _scope_templates(self, context: ReviewContext) -> list[RevisionTemplate]:
+        return [
+            RevisionTemplate(
+                title="需求跟踪矩阵补写模板",
+                purpose="补齐范围题最关键的专属产物。",
+                when_to_use="缺少需求跟踪矩阵或只提到名称没有具体字段时使用。",
+                outline=[
+                    "说明需求跟踪矩阵建立在收集需求和定义范围阶段",
+                    "列出字段：需求编号、需求描述、来源、责任人、优先级、验收标准、对应交付物",
+                    "至少举 2 个核心需求作为示例",
+                    "补一句矩阵如何支持后续确认范围和控制范围"
+                ],
+                sample="在收集需求阶段，我组织团队建立了需求跟踪矩阵，字段包括需求编号、需求描述、提出部门、责任人、优先级、验收标准及对应交付物。例如 R-01 为统一登录需求，对应门户模块，由需求分析师负责跟踪，验收标准为单点登录成功率达到100%。通过该矩阵，我们在确认范围和后续验收时能够快速定位每项需求的落实情况。"
+            ),
+            RevisionTemplate(
+                title="WBS 分解补写模板",
+                purpose="补齐范围题对子问中 WBS 的响应。",
+                when_to_use="缺少 WBS、分解层级不清或与项目内容不一致时使用。",
+                outline=[
+                    "先说明分解原则：面向可交付成果、逐层细化、责任清晰",
+                    "按项目/阶段/模块/工作包逐层分解",
+                    "说明至少分到可管理工作包层",
+                    "补一句 WBS 如何支持进度、成本和责任落实"
+                ],
+                sample="在创建WBS时，我遵循面向可交付成果、逐层分解和责任清晰的原则，将项目分解为项目管理、需求分析、系统设计、开发实现、测试验证、部署培训六大层级，再继续分解到门户模块、审批模块、报表模块等工作包。通过WBS，团队明确了边界和责任，也为后续进度编排和成本估算提供了基础。"
+            )
+        ]
+
+    def _risk_templates(self, context: ReviewContext) -> list[RevisionTemplate]:
+        return [
+            RevisionTemplate(
+                title="风险登记册补写模板",
+                purpose="补齐风险题最关键的产物和管理闭环。",
+                when_to_use="缺少风险登记册字段或没有体现动态更新过程时使用。",
+                outline=[
+                    "说明在识别风险后建立风险登记册",
+                    "列出字段：风险编号、描述、原因、概率、影响、责任人、应对措施、状态",
+                    "举 1 到 2 个实际风险案例",
+                    "补一句登记册如何在双周会议中持续更新"
+                ],
+                sample="在识别风险后，我建立了风险登记册，字段包括风险编号、风险描述、触发原因、概率、影响程度、风险责任人、应对措施和当前状态。例如 R-03 为第三方接口延期风险，概率评估为中，影响为高，由实施负责人负责跟踪，应对措施为提前联调并准备模拟接口。此后我要求团队在双周风险会议上持续更新登记册状态，确保风险处于可控范围。"
+            ),
+            RevisionTemplate(
+                title="定性定量分析补写模板",
+                purpose="提高风险题的深度得分。",
+                when_to_use="正文只写识别和应对，没有分析过程时使用。",
+                outline=[
+                    "先写概率影响矩阵进行定性分析",
+                    "再补一个定量分析或储备测算例子",
+                    "说明分析结果如何影响优先级和应对方式",
+                    "最后写应急储备或 B 计划"
+                ],
+                sample="在完成初步识别后，我先采用概率-影响矩阵对风险进行定性排序，将接口延期和核心成员流失列为高优先级风险。对于接口延期风险，我进一步结合历史数据测算可能造成的工期影响，并预留了两周进度储备。根据分析结果，我决定提前安排联调窗口，并准备模拟接口作为B计划，从而降低该风险对总工期的冲击。"
+            )
+        ]
+
+    def _quality_templates(self, context: ReviewContext) -> list[RevisionTemplate]:
+        return [
+            RevisionTemplate(
+                title="质量保证补写模板",
+                purpose="补齐质量题中最容易失分的质量保证部分。",
+                when_to_use="正文主要写测试和质量控制，缺少 QA、评审和过程保证时使用。",
+                outline=[
+                    "说明 QA 介入时点和职责",
+                    "写需求评审、设计评审、代码走查、过程审计等动作",
+                    "写质量核对单或准入标准",
+                    "最后写缺陷下降、返工减少或一次验收通过"
+                ],
+                sample="在质量保证阶段，我安排QA全过程介入，分别在需求、设计、开发和测试阶段组织正式评审，并依据质量核对单检查文档完整性、评审记录、缺陷关闭情况和发布准入条件。针对关键模块，我还安排了代码走查和过程审计。通过这些措施，项目后期重大缺陷数量明显下降，最终一次性通过用户验收。"
+            )
+        ]
+
+    def _schedule_templates(self, context: ReviewContext) -> list[RevisionTemplate]:
+        return [
+            RevisionTemplate(
+                title="进度延迟处理补写模板",
+                purpose="补齐进度题对子问“延期处理”的直接回应。",
+                when_to_use="正文有进度计划但没有偏差处理场景时使用。",
+                outline=[
+                    "先交代进度偏差出现的原因",
+                    "写关键路径分析或里程碑预警",
+                    "写赶工、快速跟进、资源调整或范围协商",
+                    "结尾写偏差如何被收敛"
+                ],
+                sample="项目中期由于接口联调迟迟未完成，里程碑节点出现延迟。为此，我首先重新审查关键路径，确认受影响任务范围，并安排开发与测试并行推进，对关键模块采用赶工方式增加人手。同时与甲方协商将低优先级需求延后处理。经过调整后，项目在后续两周内逐步追回了进度偏差。"
+            )
+        ]
+
+    def _delivery_templates(self, context: ReviewContext) -> list[RevisionTemplate]:
+        return [
+            RevisionTemplate(
+                title="交付价值与协同补写模板",
+                purpose="补齐交付绩效域的业务价值和协同目标。",
+                when_to_use="正文只写交付物，没有写业务目标、满意度和与其他绩效域协同时使用。",
+                outline=[
+                    "先写交付物如何支撑业务目标",
+                    "再写与规划、工作、干系人、不确定性等绩效域协同",
+                    "补充验收、满意度或收益兑现指标",
+                    "结尾写价值实现效果"
+                ],
+                sample="在交付绩效域管理中，我始终以业务目标为牵引，确保统一门户、审批流程和统计分析等交付物能够真正支撑客户提升办事效率。为此，我在规划绩效域中明确验收标准，在工作绩效域中跟踪执行状态，在干系人绩效域中持续收集用户反馈，并在不确定性绩效域中提前应对交付风险。最终系统顺利上线，关键功能全部通过验收，用户满意度达到预期。"
+            )
+        ]
+
+    def _uncertainty_templates(self, context: ReviewContext) -> list[RevisionTemplate]:
+        return [
+            RevisionTemplate(
+                title="不确定性与其他绩效域关系补写模板",
+                purpose="补齐不确定性绩效域的综合分析深度。",
+                when_to_use="正文只写风险处理，没有写模糊性、复杂性以及与其他绩效域联动时使用。",
+                outline=[
+                    "区分风险、模糊性、复杂性",
+                    "分别说明对规划、干系人、交付和度量的影响",
+                    "写识别、分析、储备和备选方案",
+                    "结尾写如何降低交付负面影响"
+                ],
+                sample="在本项目中，不确定性既包括接口延期等可识别风险，也包括需求口径不一致带来的模糊性，以及多系统集成带来的复杂性。针对这些因素，我一方面在规划绩效域中预留进度储备，另一方面通过干系人沟通机制及时澄清需求，并在度量绩效域中设置预警指标，动态监控不确定性变化。通过多绩效域协同，我将不确定性对交付的影响控制在可接受范围内。"
+            )
+        ]
 
     def _scope_issues(self, context: ReviewContext) -> list[Issue]:
         text = context.parsed.text

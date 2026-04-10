@@ -219,10 +219,21 @@ input[type="file"] {
   gap: 16px;
 }
 
+.template-list {
+  display: grid;
+  gap: 16px;
+}
+
+.template-card,
 .paragraph-card {
   padding: 16px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.6);
+}
+
+.template-card h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
 }
 
 @media (max-width: 840px) {
