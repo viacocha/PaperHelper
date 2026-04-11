@@ -67,3 +67,14 @@ export type ReviewResult = {
   paragraph_reviews: ParagraphReview[];
   suggested_report_name: string;
 };
+
+export type CompareResult = {
+  original: ReviewResult;
+  revised: ReviewResult;
+  score_delta: number;
+  pass_probability_changed: boolean;
+  fixed_issues: Issue[];
+  remaining_issues: Issue[];
+  new_issues: Issue[];
+  summary: string;
+};

@@ -1,4 +1,4 @@
-import type { ReviewResult, StandardOption } from "../types/review";
+import type { CompareResult, ReviewResult, StandardOption } from "../types/review";
 
 const API_BASE = "http://127.0.0.1:8000/api";
 
@@ -27,6 +27,31 @@ export async function reviewEssay(file: File, standardId: string): Promise<Revie
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.detail ?? "批改失败。");
+  }
+
+  return response.json();
+}
+
+export async function compareEssays(
+  originalFile: File,
+  revisedFile: File,
+  standardId: string
+): Promise<CompareResult> {
+  const form = new FormData();
+  form.append("original_file", originalFile);
+  form.append("revised_file", revisedFile);
+  if (standardId) {
+    form.append("standard_id", standardId);
+  }
+
+  const response = await fetch(`${API_BASE}/compare`, {
+    method: "POST",
+    body: form
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail ?? "对比失败。");
   }
 
   return response.json();

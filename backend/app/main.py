@@ -6,6 +6,7 @@ from uuid import uuid4
 from flask import Flask, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
+from app.services.compare import compare_reviews
 from app.services.report_generator import generate_report
 from app.services.reviewer import EssayReviewer
 from app.services.standards import load_standard_library
@@ -59,11 +60,7 @@ def review_essay():
     if not file or not file.filename or not file.filename.lower().endswith(".docx"):
         return jsonify({"detail": "仅支持上传 .docx 文件。"}), 400
 
-    original_name = Path(file.filename).name
-    safe_basename = secure_filename(original_name) or f"{uuid4().hex}.docx"
-    safe_name = f"{uuid4().hex}_{safe_basename}"
-    upload_path = UPLOAD_DIR / safe_name
-    file.save(upload_path)
+    upload_path, original_name = _save_upload(file)
 
     review = reviewer.review(
         upload_path,
@@ -74,6 +71,36 @@ def review_essay():
     generate_report(review, report_path)
     generated_reports[review.suggested_report_name] = report_path
     return jsonify(review.to_dict())
+
+
+@app.route("/api/compare", methods=["POST", "OPTIONS"])
+def compare_essays():
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    original_file = request.files.get("original_file")
+    revised_file = request.files.get("revised_file")
+    standard_id = request.form.get("standard_id")
+
+    if not original_file or not original_file.filename or not original_file.filename.lower().endswith(".docx"):
+        return jsonify({"detail": "请上传修改前 .docx 文件。"}), 400
+    if not revised_file or not revised_file.filename or not revised_file.filename.lower().endswith(".docx"):
+        return jsonify({"detail": "请上传修改后 .docx 文件。"}), 400
+
+    original_path, original_name = _save_upload(original_file)
+    revised_path, revised_name = _save_upload(revised_file)
+
+    original_review = reviewer.review(
+        original_path,
+        preferred_standard_id=standard_id or None,
+        original_filename=original_name,
+    )
+    revised_review = reviewer.review(
+        revised_path,
+        preferred_standard_id=standard_id or None,
+        original_filename=revised_name,
+    )
+    return jsonify(compare_reviews(original_review, revised_review).to_dict())
 
 
 @app.route("/api/reports/<report_name>", methods=["GET"])
@@ -88,6 +115,15 @@ def download_report(report_name: str):
         as_attachment=True,
         download_name=report_name,
     )
+
+
+def _save_upload(file):
+    original_name = Path(file.filename).name
+    safe_basename = secure_filename(original_name) or f"{uuid4().hex}.docx"
+    safe_name = f"{uuid4().hex}_{safe_basename}"
+    upload_path = UPLOAD_DIR / safe_name
+    file.save(upload_path)
+    return upload_path, original_name
 
 
 if __name__ == "__main__":

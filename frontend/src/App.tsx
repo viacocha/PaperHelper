@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { CompareForm } from "./components/CompareForm";
+import { CompareView } from "./components/CompareView";
 import { ResultView } from "./components/ResultView";
 import { UploadForm } from "./components/UploadForm";
-import { fetchStandards, reviewEssay } from "./lib/api";
-import type { ReviewResult, StandardOption } from "./types/review";
+import { compareEssays, fetchStandards, reviewEssay } from "./lib/api";
+import type { CompareResult, ReviewResult, StandardOption } from "./types/review";
 
 export default function App() {
   const [standards, setStandards] = useState<StandardOption[]>([]);
@@ -10,6 +12,7 @@ export default function App() {
   const [initializing, setInitializing] = useState(true);
   const [error, setError] = useState("");
   const [review, setReview] = useState<ReviewResult | null>(null);
+  const [comparison, setComparison] = useState<CompareResult | null>(null);
 
   useEffect(() => {
     fetchStandards()
@@ -24,8 +27,23 @@ export default function App() {
       setError("");
       const result = await reviewEssay(file, standardId);
       setReview(result);
+      setComparison(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "批改失败。");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCompare(originalFile: File, revisedFile: File, standardId: string) {
+    try {
+      setLoading(true);
+      setError("");
+      const result = await compareEssays(originalFile, revisedFile, standardId);
+      setComparison(result);
+      setReview(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "对比失败。");
     } finally {
       setLoading(false);
     }
@@ -47,10 +65,14 @@ export default function App() {
       {initializing ? (
         <div className="panel">正在加载标准库...</div>
       ) : (
-        <UploadForm standards={standards} loading={loading} onSubmit={handleSubmit} />
+        <>
+          <UploadForm standards={standards} loading={loading} onSubmit={handleSubmit} />
+          <CompareForm standards={standards} loading={loading} onSubmit={handleCompare} />
+        </>
       )}
 
       {review ? <ResultView review={review} /> : null}
+      {comparison ? <CompareView comparison={comparison} /> : null}
     </main>
   );
 }

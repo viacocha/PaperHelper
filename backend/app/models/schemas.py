@@ -78,3 +78,18 @@ class ReviewResult:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+@dataclass
+class CompareResult:
+    original: ReviewResult
+    revised: ReviewResult
+    score_delta: float
+    pass_probability_changed: bool
+    fixed_issues: list[Issue]
+    remaining_issues: list[Issue]
+    new_issues: list[Issue]
+    summary: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)
