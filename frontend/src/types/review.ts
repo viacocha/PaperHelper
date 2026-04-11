@@ -12,6 +12,14 @@ export type CriterionScore = {
   summary: string;
 };
 
+export type TopicScorecardItem = {
+  title: string;
+  score: number;
+  max_score: number;
+  status: "good" | "warning" | "missing";
+  summary: string;
+};
+
 export type Issue = {
   severity: "high" | "medium" | "low";
   action_priority: "must" | "should" | "could";
@@ -50,6 +58,7 @@ export type ReviewResult = {
   pass_probability: "high" | "medium" | "low";
   summary: string;
   dimensions: CriterionScore[];
+  topic_scorecard: TopicScorecardItem[];
   issues: Issue[];
   must_fix: Issue[];
   should_fix: Issue[];

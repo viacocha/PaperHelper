@@ -14,6 +14,15 @@ class CriterionScore:
 
 
 @dataclass
+class TopicScorecardItem:
+    title: str
+    score: float
+    max_score: float
+    status: Literal["good", "warning", "missing"]
+    summary: str
+
+
+@dataclass
 class Issue:
     severity: Literal["high", "medium", "low"]
     action_priority: Literal["must", "should", "could"]
@@ -58,6 +67,7 @@ class ReviewResult:
     pass_probability: Literal["high", "medium", "low"]
     summary: str
     dimensions: list[CriterionScore]
+    topic_scorecard: list[TopicScorecardItem]
     issues: list[Issue]
     must_fix: list[Issue]
     should_fix: list[Issue]

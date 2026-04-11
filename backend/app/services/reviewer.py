@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from app.models.schemas import CriterionScore, Issue, ParagraphReview, RevisionTemplate, ReviewResult, StandardMatch
+from app.models.schemas import CriterionScore, Issue, ParagraphReview, RevisionTemplate, ReviewResult, StandardMatch, TopicScorecardItem
 from app.services.parser import ParsedEssay, parse_docx
 from app.services.standards import Standard, StandardLibrary, load_standard_library
 
@@ -42,6 +42,7 @@ class EssayReviewer:
         )
 
         dimensions = self._score_dimensions(context)
+        topic_scorecard = self._build_topic_scorecard(context)
         issues = self._collect_issues(context)
         must_fix, should_fix, could_improve = self._group_issues(issues)
         revision_templates = self._build_revision_templates(context, must_fix, should_fix)
@@ -63,6 +64,7 @@ class EssayReviewer:
             pass_probability=self._pass_probability(total_score),
             summary=self._build_summary(total_score, issues, context),
             dimensions=dimensions,
+            topic_scorecard=topic_scorecard,
             issues=issues,
             must_fix=must_fix,
             should_fix=should_fix,
@@ -128,6 +130,24 @@ class EssayReviewer:
             CriterionScore(id="closure", name="问题闭环与总结", score=round(issue_loop_score, 1), max_score=6, summary="检查问题、措施、结果、心得闭环。"),
             CriterionScore(id="expression", name="表达与结构", score=round(expression_score, 1), max_score=4.5, summary="检查结构完整度和可读性。"),
         ]
+
+    def _build_topic_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        builders = {
+            "scope_management": self._scope_scorecard,
+            "schedule_management": self._schedule_scorecard,
+            "cost_management": self._cost_scorecard,
+            "quality_management": self._quality_scorecard,
+            "risk_management": self._risk_scorecard,
+            "stakeholder_management": self._stakeholder_scorecard,
+            "contract_management": self._contract_scorecard,
+            "planning_performance_domain": self._planning_scorecard,
+            "work_performance_domain": self._work_pd_scorecard,
+            "delivery_performance_domain": self._delivery_scorecard,
+            "uncertainty_performance_domain": self._uncertainty_scorecard,
+            "measurement_performance_domain": self._measurement_scorecard,
+        }
+        builder = builders.get(context.standard.id)
+        return builder(context) if builder else self._generic_scorecard(context)
 
     def _collect_issues(self, context: ReviewContext) -> list[Issue]:
         parsed = context.parsed
@@ -424,6 +444,134 @@ class EssayReviewer:
                 sample="在项目实施过程中，由于甲方多个业务部门口径不一致，需求反复变化，导致交付边界一度不清。为此，我组织召开了专题需求澄清会，并结合需求跟踪矩阵逐项确认需求来源、责任人和验收标准。同时我要求团队每周更新问题清单，双周进行一次范围评审。经过以上措施，需求变更率明显下降，后续验收工作也更加顺畅。"
             )
         ]
+
+    def _generic_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("项目背景与角色", self._keyword_hits(text, ["项目经理", "项目背景", "工期", "交付成果", "负责"]), 4, 5, "检查项目真实性和本人职责。"),
+            self._make_scorecard_item("核心过程展开", self._keyword_hits(text, context.standard.required_processes), max(2, len(context.standard.required_processes) // 2), 5, "检查题型核心过程是否被展开。"),
+            self._make_scorecard_item("专属产物响应", self._keyword_hits(text, context.standard.required_artifacts), max(1, len(context.standard.required_artifacts)), 5, "检查矩阵、计划、登记册等产物。"),
+            self._make_scorecard_item("问题与结果闭环", self._keyword_hits(text, ["问题", "风险", "措施", "最终", "验收", "体会"]), 4, 5, "检查是否写出问题、措施和结果。"),
+        ]
+
+    def _scope_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("范围过程覆盖", self._keyword_hits(text, context.standard.required_processes), 4, 5, "规划范围、收集需求、定义范围、创建WBS等过程是否完整。"),
+            self._make_scorecard_item("需求跟踪矩阵", text.count("需求跟踪矩阵"), 1, 5, "是否写出矩阵及关键字段或示例需求。"),
+            self._make_scorecard_item("WBS 分解", text.count("WBS"), 1, 5, "是否写出与项目一致的 WBS 分解。"),
+            self._make_scorecard_item("确认与控制范围", self._keyword_hits(text, ["确认范围", "控制范围", "验收", "范围变更"]), 3, 5, "是否写出确认范围和范围控制。"),
+        ]
+
+    def _schedule_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("进度过程覆盖", self._keyword_hits(text, context.standard.required_processes), 4, 5, "是否覆盖定义活动、排序、估算、制定计划和控制进度。"),
+            self._make_scorecard_item("进度计划/甘特图", self._keyword_hits(text, ["甘特图", "进度计划", "里程碑"]), 2, 5, "是否体现主要进度计划产物。"),
+            self._make_scorecard_item("延期处理", self._keyword_hits(text, ["延期", "延迟", "赶工", "快速跟进", "关键路径"]), 2, 5, "是否回应进度偏差和纠偏方式。"),
+            self._make_scorecard_item("结果与偏差收敛", self._keyword_hits(text, ["按期", "里程碑", "追赶", "偏差", "验收"]), 2, 5, "是否写出调整后的效果。"),
+        ]
+
+    def _cost_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("成本过程覆盖", self._keyword_hits(text, context.standard.required_processes), 3, 5, "是否覆盖估算、预算和控制成本。"),
+            self._make_scorecard_item("预算形成", self._keyword_hits(text, ["预算", "成本基准", "估算", "汇总"]), 3, 5, "是否写清预算形成过程。"),
+            self._make_scorecard_item("成本控制方法", self._keyword_hits(text, ["挣值", "S曲线", "偏差分析", "趋势分析", "成本控制"]), 2, 5, "是否写明成本监控与纠偏工具。"),
+            self._make_scorecard_item("成本结果", self._keyword_hits(text, ["预算范围内", "偏差收敛", "节约", "控制在"]), 2, 5, "是否体现最终成本效果。"),
+        ]
+
+    def _quality_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("质量过程覆盖", self._keyword_hits(text, context.standard.required_processes), 3, 5, "是否覆盖规划质量、质量保证和质量控制。"),
+            self._make_scorecard_item("质量保证", self._keyword_hits(text, ["质量保证", "QA", "评审", "过程审计"]), 3, 5, "是否写出质量保证动作。"),
+            self._make_scorecard_item("质量核对单/标准", self._keyword_hits(text, ["核对单", "质量标准", "准入标准"]), 2, 5, "是否给出核对单或质量准入要求。"),
+            self._make_scorecard_item("质量结果", self._keyword_hits(text, ["缺陷", "一次性通过", "验收", "返工"]), 2, 5, "是否体现质量改进结果。"),
+        ]
+
+    def _risk_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("风险过程覆盖", self._keyword_hits(text, context.standard.required_processes), 4, 5, "是否覆盖识别、分析、应对和监督风险。"),
+            self._make_scorecard_item("风险登记册", self._keyword_hits(text, ["风险登记册", "风险编号", "概率", "影响", "责任人"]), 3, 5, "是否写出登记册字段或样例。"),
+            self._make_scorecard_item("定性/定量分析", self._keyword_hits(text, ["定性", "定量", "概率影响矩阵", "建模", "模拟"]), 2, 5, "是否体现分析深度。"),
+            self._make_scorecard_item("风险应对与跟踪", self._keyword_hits(text, ["应对", "储备", "B计划", "监督风险", "双周风险会议"]), 3, 5, "是否写出应对和跟踪机制。"),
+        ]
+
+    def _stakeholder_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("干系人过程覆盖", self._keyword_hits(text, context.standard.required_processes), 3, 5, "是否覆盖识别、规划参与、管理参与和监督参与。"),
+            self._make_scorecard_item("权力/利益方格", self._keyword_hits(text, ["权力", "利益方格", "参与度评估矩阵"]), 2, 5, "是否写出分类分析和策略。"),
+            self._make_scorecard_item("联系与区别", self._keyword_hits(text, ["沟通管理", "需求管理", "区别", "联系"]), 2, 5, "是否回应与沟通/需求管理的区别。"),
+            self._make_scorecard_item("干系人成效", self._keyword_hits(text, ["满意度", "参与", "支持", "冲突处理"]), 2, 5, "是否体现管理效果。"),
+        ]
+
+    def _contract_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("合同过程覆盖", self._keyword_hits(text, context.standard.required_processes), 3, 5, "是否覆盖签订、履行、变更、档案和索赔。"),
+            self._make_scorecard_item("索赔流程", self._keyword_hits(text, ["索赔", "监理", "审批", "书面提出"]), 2, 5, "是否写出索赔或变更流程。"),
+            self._make_scorecard_item("主要条款", self._keyword_hits(text, ["付款", "违约", "验收条款", "范围条款", "工期"]), 3, 5, "是否列出核心合同条款。"),
+            self._make_scorecard_item("合同执行结果", self._keyword_hits(text, ["履约", "按合同", "验收", "违约控制"]), 2, 5, "是否体现合同执行效果。"),
+        ]
+
+    def _planning_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("项目管理计划主线", self._keyword_hits(text, ["项目管理计划", "子计划", "基准"]), 3, 5, "是否围绕项目管理计划展开。"),
+            self._make_scorecard_item("规划关键抓手", self._keyword_hits(text, ["估算", "滚动式规划", "变更控制", "采购规划", "沟通规划"]), 3, 5, "是否写出规划抓手。"),
+            self._make_scorecard_item("规划适应变化", self._keyword_hits(text, ["调整", "变化", "基准更新", "变更"]), 2, 5, "是否体现动态规划。"),
+            self._make_scorecard_item("规划结果", self._keyword_hits(text, ["协调一致", "按计划推进", "差异收敛"]), 2, 5, "是否体现规划效果。"),
+        ]
+
+    def _work_pd_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("执行监控机制", self._keyword_hits(text, ["状态报告", "过程审计", "变更日志", "采购审计"]), 3, 5, "是否写出执行中的监控抓手。"),
+            self._make_scorecard_item("沟通/资源/采购管理", self._keyword_hits(text, ["沟通", "资源利用率", "采购", "实物资源"]), 3, 5, "是否覆盖工作绩效域关键要点。"),
+            self._make_scorecard_item("变更与新工作处理", self._keyword_hits(text, ["变更", "新工作", "评估", "范围增加"]), 2, 5, "是否写出变更评估和处理。"),
+            self._make_scorecard_item("持续改进", self._keyword_hits(text, ["经验教训", "持续改进", "知识管理", "复盘"]), 2, 5, "是否体现学习与改进。"),
+        ]
+
+    def _delivery_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("业务价值与目标一致", self._keyword_hits(text, ["业务目标", "价值", "收益", "战略"]), 3, 5, "是否写出交付与业务目标一致。"),
+            self._make_scorecard_item("可交付物与验收", self._keyword_hits(text, ["交付物", "验收", "质量标准", "需求理解"]), 3, 5, "是否写出交付物和验收机制。"),
+            self._make_scorecard_item("绩效域协同", self._keyword_hits(text, ["协同", "规划绩效域", "工作绩效域", "干系人"]), 2, 5, "是否写出与其他绩效域协同。"),
+            self._make_scorecard_item("测量指标与满意度", self._keyword_hits(text, ["测量指标", "满意度", "收益兑现", "缺陷"]), 2, 5, "是否写出测量指标和最终效果。"),
+        ]
+
+    def _uncertainty_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("风险/模糊性/复杂性", self._keyword_hits(text, ["风险", "模糊性", "复杂性"]), 3, 5, "是否覆盖三类不确定性来源。"),
+            self._make_scorecard_item("分析与排序", self._keyword_hits(text, ["分析", "排序", "概率", "影响", "优先级"]), 3, 5, "是否体现识别后的分析排序。"),
+            self._make_scorecard_item("应对与储备", self._keyword_hits(text, ["储备", "应对", "机会", "威胁", "B计划"]), 3, 5, "是否写出储备和应对策略。"),
+            self._make_scorecard_item("与其他绩效域关系", self._keyword_hits(text, ["其他绩效域", "干系人绩效域", "规划绩效域", "度量绩效域"]), 2, 5, "是否说明相互作用。"),
+        ]
+
+    def _measurement_scorecard(self, context: ReviewContext) -> list[TopicScorecardItem]:
+        text = context.parsed.text
+        return [
+            self._make_scorecard_item("指标体系", self._keyword_hits(text, ["指标", "KPI", "阈值", "预警"]), 3, 5, "是否建立有效指标体系。"),
+            self._make_scorecard_item("展示与诊断", self._keyword_hits(text, ["状态报告", "趋势分析", "偏差分析", "图表"]), 2, 5, "是否写出展示和诊断方式。"),
+            self._make_scorecard_item("基于度量采取行动", self._keyword_hits(text, ["纠偏", "行动", "决策", "调整"]), 2, 5, "是否体现数据驱动决策。"),
+            self._make_scorecard_item("持续改进", self._keyword_hits(text, ["持续改进", "优化指标", "复盘"]), 2, 5, "是否体现度量闭环。"),
+        ]
+
+    def _make_scorecard_item(self, title: str, hits: int, target: int, max_score: float, summary: str) -> TopicScorecardItem:
+        ratio = min(hits / max(1, target), 1.0)
+        score = round(ratio * max_score, 1)
+        if ratio >= 0.8:
+            status = "good"
+        elif ratio >= 0.4:
+            status = "warning"
+        else:
+            status = "missing"
+        return TopicScorecardItem(title=title, score=score, max_score=max_score, status=status, summary=summary)
 
     def _scope_templates(self, context: ReviewContext) -> list[RevisionTemplate]:
         return [

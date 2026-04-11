@@ -50,21 +50,38 @@ export function ResultView({ review }: ResultViewProps) {
         </div>
 
         <div className="panel">
-          <h3>主要问题</h3>
-          <ul className="issue-list">
-            {review.issues.length ? (
-              review.issues.map((item, index) => (
-                <li key={`${item.title}-${index}`} className={`severity-${item.severity}`}>
-                  <strong>{item.title}</strong>
-                  <p>{item.details}</p>
-                  <p>建议：{item.suggestion}</p>
-                </li>
-              ))
-            ) : (
-              <li>未检测到明显高风险问题。</li>
-            )}
+          <h3>题型评分卡</h3>
+          <ul className="metric-list">
+            {review.topic_scorecard.map((item, index) => (
+              <li key={`${item.title}-${index}`} className={`scorecard-${item.status}`}>
+                <div className="metric-head">
+                  <span>{item.title}</span>
+                  <strong>
+                    {item.score} / {item.max_score}
+                  </strong>
+                </div>
+                <p>{item.summary}</p>
+              </li>
+            ))}
           </ul>
         </div>
+      </div>
+
+      <div className="panel">
+        <h3>主要问题</h3>
+        <ul className="issue-list">
+          {review.issues.length ? (
+            review.issues.map((item, index) => (
+              <li key={`${item.title}-${index}`} className={`severity-${item.severity}`}>
+                <strong>{item.title}</strong>
+                <p>{item.details}</p>
+                <p>建议：{item.suggestion}</p>
+              </li>
+            ))
+          ) : (
+            <li>未检测到明显高风险问题。</li>
+          )}
+        </ul>
       </div>
 
       <div className="grid three-columns">

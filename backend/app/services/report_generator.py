@@ -25,7 +25,14 @@ def generate_report(review: ReviewResult, output_path: Path) -> Path:
             style="List Bullet",
         )
 
-    _add_heading(document, "三、主要问题与修改建议")
+    _add_heading(document, "三、题型评分卡")
+    for item in review.topic_scorecard:
+        document.add_paragraph(
+            f"[{item.status.upper()}] {item.title}：{item.score} / {item.max_score}。{item.summary}",
+            style="List Bullet",
+        )
+
+    _add_heading(document, "四、主要问题与修改建议")
     if review.issues:
         for item in review.issues:
             paragraph = document.add_paragraph(style="List Bullet")
@@ -36,12 +43,12 @@ def generate_report(review: ReviewResult, output_path: Path) -> Path:
     else:
         document.add_paragraph("未检测到明显高风险问题，但仍建议结合题目子问逐项复核。")
 
-    _add_heading(document, "四、修改优先级队列")
+    _add_heading(document, "五、修改优先级队列")
     _add_issue_group(document, "必须补写", review.must_fix)
     _add_issue_group(document, "建议补强", review.should_fix)
     _add_issue_group(document, "可优化项", review.could_improve)
 
-    _add_heading(document, "五、题型模板建议")
+    _add_heading(document, "六、题型模板建议")
     for item in review.revision_templates:
         document.add_paragraph(item.title).runs[0].bold = True
         document.add_paragraph("用途：" + item.purpose)
@@ -49,7 +56,7 @@ def generate_report(review: ReviewResult, output_path: Path) -> Path:
         document.add_paragraph("补写结构：" + "；".join(item.outline))
         document.add_paragraph("示例写法：" + item.sample)
 
-    _add_heading(document, "六、逐段建议")
+    _add_heading(document, "七、逐段建议")
     for paragraph_review in review.paragraph_reviews:
         document.add_paragraph(f"第 {paragraph_review.index} 段：{paragraph_review.excerpt}", style="List Bullet")
         if paragraph_review.strengths:
@@ -59,7 +66,7 @@ def generate_report(review: ReviewResult, output_path: Path) -> Path:
         if paragraph_review.suggestions:
             document.add_paragraph("建议：" + "；".join(paragraph_review.suggestions))
 
-    _add_heading(document, "七、修改顺序建议")
+    _add_heading(document, "八、修改顺序建议")
     priorities = [
         "先补齐题目要求的子问、专属产物和关键过程。",
         "再强化项目经理视角、问题应对和结果成效。",

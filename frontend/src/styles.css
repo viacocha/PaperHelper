@@ -192,6 +192,18 @@ input[type="file"] {
   font-weight: 700;
 }
 
+.scorecard-good {
+  border-left: 4px solid #2b7a49;
+}
+
+.scorecard-warning {
+  border-left: 4px solid #d38a11;
+}
+
+.scorecard-missing {
+  border-left: 4px solid #b02a1f;
+}
+
 .issue-list li {
   padding: 14px;
   border-radius: 16px;
