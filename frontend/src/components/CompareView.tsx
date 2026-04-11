@@ -1,4 +1,5 @@
 import type { CompareResult, Issue } from "../types/review";
+import { reportDownloadUrl } from "../lib/api";
 
 type CompareViewProps = {
   comparison: CompareResult;
@@ -23,6 +24,9 @@ export function CompareView({ comparison }: CompareViewProps) {
             <small>目标通过线 {comparison.revised.pass_score}</small>
           </div>
         </div>
+        <a className="download-link" href={reportDownloadUrl(comparison.compare_report_name)}>
+          下载二次对比 Word
+        </a>
       </div>
 
       <div className="grid three-columns">

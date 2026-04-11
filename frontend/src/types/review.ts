@@ -77,4 +77,5 @@ export type CompareResult = {
   remaining_issues: Issue[];
   new_issues: Issue[];
   summary: string;
+  compare_report_name: string;
 };

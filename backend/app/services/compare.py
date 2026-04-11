@@ -3,7 +3,7 @@ from __future__ import annotations
 from app.models.schemas import CompareResult, Issue, ReviewResult
 
 
-def compare_reviews(original: ReviewResult, revised: ReviewResult) -> CompareResult:
+def compare_reviews(original: ReviewResult, revised: ReviewResult, report_name: str) -> CompareResult:
     original_by_title = {item.title: item for item in original.issues}
     revised_by_title = {item.title: item for item in revised.issues}
 
@@ -25,6 +25,7 @@ def compare_reviews(original: ReviewResult, revised: ReviewResult) -> CompareRes
         remaining_issues=remaining_issues,
         new_issues=new_issues,
         summary=_build_summary(score_delta, fixed_issues, remaining_issues, new_issues),
+        compare_report_name=report_name,
     )
 
 

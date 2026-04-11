@@ -90,6 +90,7 @@ class CompareResult:
     remaining_issues: list[Issue]
     new_issues: list[Issue]
     summary: str
+    compare_report_name: str
 
     def to_dict(self) -> dict:
         return asdict(self)

@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
 from app.services.compare import compare_reviews
-from app.services.report_generator import generate_report
+from app.services.report_generator import generate_compare_report, generate_report
 from app.services.reviewer import EssayReviewer
 from app.services.standards import load_standard_library
 
@@ -100,7 +100,12 @@ def compare_essays():
         preferred_standard_id=standard_id or None,
         original_filename=revised_name,
     )
-    return jsonify(compare_reviews(original_review, revised_review).to_dict())
+    report_name = f"{Path(revised_name).stem}+二次批改对比报告.docx"
+    comparison = compare_reviews(original_review, revised_review, report_name)
+    report_path = REPORT_DIR / report_name
+    generate_compare_report(comparison, report_path)
+    generated_reports[report_name] = report_path
+    return jsonify(comparison.to_dict())
 
 
 @app.route("/api/reports/<report_name>", methods=["GET"])

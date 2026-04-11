@@ -5,7 +5,7 @@ from pathlib import Path
 from docx import Document
 from docx.shared import Pt
 
-from app.models.schemas import ReviewResult
+from app.models.schemas import CompareResult, ReviewResult
 
 
 def generate_report(review: ReviewResult, output_path: Path) -> Path:
@@ -74,6 +74,38 @@ def generate_report(review: ReviewResult, output_path: Path) -> Path:
     ]
     for item in priorities:
         document.add_paragraph(item, style="List Number")
+
+    document.save(output_path)
+    return output_path
+
+
+def generate_compare_report(comparison: CompareResult, output_path: Path) -> Path:
+    document = Document()
+    _add_title(document, f"{comparison.revised.filename} 二次批改对比报告")
+
+    _add_heading(document, "一、对比总评")
+    document.add_paragraph(f"修改前总分：{comparison.original.total_score} / 75")
+    document.add_paragraph(f"修改后总分：{comparison.revised.total_score} / 75")
+    document.add_paragraph(f"分数变化：{comparison.score_delta:+.1f}")
+    document.add_paragraph("通过风险变化：" + ("已变化" if comparison.pass_probability_changed else "未变化"))
+    document.add_paragraph("总体结论：" + comparison.summary)
+
+    _add_heading(document, "二、已修复问题")
+    _add_issue_group(document, "已修复", comparison.fixed_issues)
+
+    _add_heading(document, "三、仍未解决问题")
+    _add_issue_group(document, "仍未解决", comparison.remaining_issues)
+
+    _add_heading(document, "四、新增问题")
+    _add_issue_group(document, "新增", comparison.new_issues)
+
+    _add_heading(document, "五、下一轮修改建议")
+    if comparison.remaining_issues:
+        document.add_paragraph("优先处理仍未解决的问题，尤其是必须补写项和题目专属产物缺失。")
+    if comparison.new_issues:
+        document.add_paragraph("检查新增问题是否由压缩、改写或结构调整导致，避免修复旧问题时引入新缺陷。")
+    if not comparison.remaining_issues and not comparison.new_issues:
+        document.add_paragraph("当前未发现旧问题残留或新增问题，可进入表达润色和考场默写训练阶段。")
 
     document.save(output_path)
     return output_path
