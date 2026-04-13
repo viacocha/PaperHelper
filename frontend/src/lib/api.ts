@@ -1,4 +1,4 @@
-import type { CompareResult, ReviewResult, StandardOption } from "../types/review";
+import type { CompareResult, GeneratedPaper, ReviewResult, StandardOption } from "../types/review";
 
 const API_BASE = "http://127.0.0.1:8000/api";
 
@@ -52,6 +52,26 @@ export async function compareEssays(
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     throw new Error(payload.detail ?? "对比失败。");
+  }
+
+  return response.json();
+}
+
+export async function generatePaper(projectBackground: string, standardId: string): Promise<GeneratedPaper> {
+  const response = await fetch(`${API_BASE}/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      project_background: projectBackground,
+      standard_id: standardId
+    })
+  });
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.detail ?? "生成失败。");
   }
 
   return response.json();

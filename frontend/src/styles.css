@@ -80,11 +80,18 @@ body {
 }
 
 select,
-input[type="file"] {
+input[type="file"],
+.textarea {
   border-radius: 14px;
   border: 1px solid rgba(85, 72, 32, 0.18);
   padding: 12px 14px;
   background: rgba(255, 255, 255, 0.75);
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 180px;
+  font: inherit;
 }
 
 .upload-box {
@@ -246,6 +253,17 @@ input[type="file"] {
 .template-card h4 {
   margin-top: 0;
   margin-bottom: 8px;
+}
+
+.generated-paper {
+  display: grid;
+  gap: 12px;
+  color: #373821;
+}
+
+.generated-paper p {
+  margin: 0;
+  text-indent: 2em;
 }
 
 @media (max-width: 840px) {

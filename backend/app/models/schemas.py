@@ -94,3 +94,15 @@ class CompareResult:
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+@dataclass
+class GeneratedPaper:
+    title: str
+    standard: StandardMatch
+    content: str
+    paragraphs: list[str]
+    generated_report_name: str
+
+    def to_dict(self) -> dict:
+        return asdict(self)

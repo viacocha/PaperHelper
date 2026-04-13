@@ -7,6 +7,7 @@ from flask import Flask, jsonify, request, send_file
 from werkzeug.utils import secure_filename
 
 from app.services.compare import compare_reviews
+from app.services.generator import generate_paper
 from app.services.report_generator import generate_compare_report, generate_report
 from app.services.reviewer import EssayReviewer
 from app.services.standards import load_standard_library
@@ -106,6 +107,29 @@ def compare_essays():
     generate_compare_report(comparison, report_path)
     generated_reports[report_name] = report_path
     return jsonify(comparison.to_dict())
+
+
+@app.route("/api/generate", methods=["POST", "OPTIONS"])
+def generate_essay():
+    if request.method == "OPTIONS":
+        return ("", 204)
+
+    payload = request.get_json(silent=True) or {}
+    project_background = str(payload.get("project_background", "")).strip()
+    standard_id = str(payload.get("standard_id", "")).strip()
+
+    if len(project_background) < 80:
+        return jsonify({"detail": "项目背景信息太少，请至少补充项目目标、周期、角色、模块和交付成果。"}), 400
+    if not standard_id:
+        return jsonify({"detail": "请选择要生成的论文题型。"}), 400
+
+    try:
+        generated, output_path = generate_paper(project_background, standard_id, library, REPORT_DIR)
+    except ValueError as error:
+        return jsonify({"detail": str(error)}), 400
+
+    generated_reports[generated.generated_report_name] = output_path
+    return jsonify(generated.to_dict())
 
 
 @app.route("/api/reports/<report_name>", methods=["GET"])

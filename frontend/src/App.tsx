@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { CompareForm } from "./components/CompareForm";
 import { CompareView } from "./components/CompareView";
+import { GeneratedPaperView } from "./components/GeneratedPaperView";
+import { GenerateForm } from "./components/GenerateForm";
 import { ResultView } from "./components/ResultView";
 import { UploadForm } from "./components/UploadForm";
-import { compareEssays, fetchStandards, reviewEssay } from "./lib/api";
-import type { CompareResult, ReviewResult, StandardOption } from "./types/review";
+import { compareEssays, fetchStandards, generatePaper, reviewEssay } from "./lib/api";
+import type { CompareResult, GeneratedPaper, ReviewResult, StandardOption } from "./types/review";
 
 export default function App() {
   const [standards, setStandards] = useState<StandardOption[]>([]);
@@ -13,6 +15,7 @@ export default function App() {
   const [error, setError] = useState("");
   const [review, setReview] = useState<ReviewResult | null>(null);
   const [comparison, setComparison] = useState<CompareResult | null>(null);
+  const [generatedPaper, setGeneratedPaper] = useState<GeneratedPaper | null>(null);
 
   useEffect(() => {
     fetchStandards()
@@ -28,6 +31,7 @@ export default function App() {
       const result = await reviewEssay(file, standardId);
       setReview(result);
       setComparison(null);
+      setGeneratedPaper(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "批改失败。");
     } finally {
@@ -42,8 +46,24 @@ export default function App() {
       const result = await compareEssays(originalFile, revisedFile, standardId);
       setComparison(result);
       setReview(null);
+      setGeneratedPaper(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "对比失败。");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGenerate(projectBackground: string, standardId: string) {
+    try {
+      setLoading(true);
+      setError("");
+      const result = await generatePaper(projectBackground, standardId);
+      setGeneratedPaper(result);
+      setReview(null);
+      setComparison(null);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "生成失败。");
     } finally {
       setLoading(false);
     }
@@ -66,11 +86,13 @@ export default function App() {
         <div className="panel">正在加载标准库...</div>
       ) : (
         <>
+          <GenerateForm standards={standards} loading={loading} onSubmit={handleGenerate} />
           <UploadForm standards={standards} loading={loading} onSubmit={handleSubmit} />
           <CompareForm standards={standards} loading={loading} onSubmit={handleCompare} />
         </>
       )}
 
+      {generatedPaper ? <GeneratedPaperView paper={generatedPaper} /> : null}
       {review ? <ResultView review={review} /> : null}
       {comparison ? <CompareView comparison={comparison} /> : null}
     </main>

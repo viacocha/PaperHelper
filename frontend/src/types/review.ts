@@ -79,3 +79,16 @@ export type CompareResult = {
   summary: string;
   compare_report_name: string;
 };
+
+export type GeneratedPaper = {
+  title: string;
+  standard: {
+    standard_id: string;
+    standard_name: string;
+    category: string;
+    confidence: number;
+  };
+  content: string;
+  paragraphs: string[];
+  generated_report_name: string;
+};
