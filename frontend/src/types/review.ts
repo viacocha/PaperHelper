@@ -90,5 +90,7 @@ export type GeneratedPaper = {
   };
   content: string;
   paragraphs: string[];
+  word_count: number;
+  minimum_word_count: number;
   generated_report_name: string;
 };

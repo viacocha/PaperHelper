@@ -102,6 +102,8 @@ class GeneratedPaper:
     standard: StandardMatch
     content: str
     paragraphs: list[str]
+    word_count: int
+    minimum_word_count: int
     generated_report_name: str
 
     def to_dict(self) -> dict:

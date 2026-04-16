@@ -34,7 +34,7 @@ export function GenerateForm({ standards, loading, onSubmit }: GenerateFormProps
           <p className="eyebrow">Paper Draft</p>
           <h2>自动生成论文初稿</h2>
         </div>
-        <p className="muted">输入项目背景和论文题型，生成一篇信息系统项目管理师论文初稿 Word。</p>
+        <p className="muted">输入项目背景和论文题型，生成一篇 2500 字以上的信息系统项目管理师结构化论文初稿 Word。</p>
       </div>
 
       <label className="field">

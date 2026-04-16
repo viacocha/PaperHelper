@@ -13,7 +13,9 @@ export function GeneratedPaperView({ paper }: GeneratedPaperViewProps) {
           <div>
             <p className="eyebrow">生成结果</p>
             <h2>{paper.title}</h2>
-            <p className="muted">题型：{paper.standard.standard_name}</p>
+            <p className="muted">
+              题型：{paper.standard.standard_name} · 约 {paper.word_count} 字 · 最低要求 {paper.minimum_word_count} 字
+            </p>
           </div>
           <a className="download-link" href={reportDownloadUrl(paper.generated_report_name)}>
             下载论文初稿 Word
