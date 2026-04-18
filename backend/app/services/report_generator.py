@@ -242,20 +242,67 @@ def _overall_comment_text(review: ReviewResult) -> str:
 def _paragraph_comment_text(paragraph_review) -> str:  # type: ignore[no-untyped-def]
     parts: list[str] = []
     if paragraph_review.issues:
-        parts.append("修改建议：" + "；".join(_humanize_comment(item) for item in paragraph_review.issues))
+        parts.append(
+            "修改建议：" + "；".join(
+                _humanize_comment(item, paragraph_review.index, item_index)
+                for item_index, item in enumerate(paragraph_review.issues)
+            )
+        )
     if paragraph_review.suggestions:
-        parts.append("建议你这样处理：" + "；".join(_humanize_comment(item) for item in paragraph_review.suggestions))
+        parts.append(
+            "建议你这样处理：" + "；".join(
+                _humanize_comment(item, paragraph_review.index, item_index)
+                for item_index, item in enumerate(paragraph_review.suggestions)
+            )
+        )
     if not parts:
         return ""
     if paragraph_review.strengths:
-        parts.append("这一段保留的点：" + "；".join(_humanize_comment(item) for item in paragraph_review.strengths))
+        parts.append(
+            "这一段保留的点：" + "；".join(
+                _humanize_comment(item, paragraph_review.index, item_index)
+                for item_index, item in enumerate(paragraph_review.strengths)
+            )
+        )
     return " ".join(parts)
 
 
-def _humanize_comment(text: str) -> str:
+def _humanize_comment(text: str, paragraph_index: int = 0, item_index: int = 0) -> str:
+    first_person_issue_variants = [
+        "这一段需要再突出一下你本人在项目中的管理动作",
+        "这里需要再往“我怎么管项目”上落一下，不能只写事情本身",
+        "这一段项目经理视角偏弱，阅卷老师不容易看到你的管理动作",
+        "这里最好补出你的角色动作，比如你怎么组织、协调、推动",
+        "这一段现在更像在描述项目情况，还没有把你个人的管理责任写出来",
+        "这里缺少“我做了什么”的表达，建议把管理动作写得更明确",
+        "这一段要把主语拉回到项目经理身上，让人看到你在现场怎么处理",
+        "这里不要只交代背景，要补出你作为负责人采取了哪些管理动作",
+        "这一段可以再补一点你的组织、判断和推动过程，否则会显得像项目介绍",
+        "这里要让阅卷老师看到你的管理痕迹，比如你怎么安排、怎么跟进、怎么确认",
+        "这一段还需要把你的项目经理职责写实一些，不要只写团队或项目本身",
+        "这里建议把管理动作写到台前，让人能看出这件事是你在主导推进",
+    ]
+    first_person_suggestion_variants = [
+        "建议补上“我组织、我制定、我协调、我推动”这类动作，让阅卷老师看到是你在管理项目",
+        "可以加一句你当时怎么组织会议、协调资源或推动问题闭环，这样管理者身份会更清楚",
+        "建议把这一段改成“我采取了什么措施”的写法，不要只停留在客观描述",
+        "这里补两三个具体动作即可，比如你安排谁做、怎么跟踪、最后怎么确认结果",
+        "可以写清楚你作为项目经理做了哪些判断、协调和控制动作",
+        "建议把“团队做了什么”改得更具体一些，突出你本人如何推动这件事",
+        "这里补上你的管理动作和决策依据，文章会更像考试论文而不是项目介绍",
+        "建议用一两句话写出你怎么组织、怎么检查、怎么纠偏",
+        "可以补一两句你当时的安排和跟踪方式，把项目经理的作用写出来",
+        "建议写清楚你如何分配任务、跟进进展，以及如何确认这件事已经闭环",
+        "这里可以加上你主持了什么沟通、做了什么判断、推动了什么结果",
+        "建议把这一段改成“我发现问题后如何处理”的口吻，会更贴近阅卷要求",
+    ]
+    variant_index = (paragraph_index - 1 + item_index) % len(first_person_issue_variants)
+    if text == "本段缺少第一人称管理者视角。":
+        return first_person_issue_variants[variant_index]
+    if text == "补充“我组织/我制定/我协调/我推动”等管理动作。":
+        return first_person_suggestion_variants[variant_index]
+
     exact_replacements = {
-        "本段缺少第一人称管理者视角。": "这一段还看不出你作为项目经理具体做了什么",
-        "补充“我组织/我制定/我协调/我推动”等管理动作。": "建议补上“我组织、我制定、我协调、我推动”这类动作，让阅卷老师看到是你在管理项目",
         "本段缺少问题-措施-结果闭环。": "这里还缺一条完整的处理线：遇到了什么问题、你怎么处理、最后效果如何",
         "增加遇到的问题、采取的措施及最终效果。": "加上一个真实的小场景，把问题、措施和结果写完整",
         "本段内容偏短，信息密度不足。": "这一段太短了，阅卷时会显得内容比较空",
