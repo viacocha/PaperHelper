@@ -237,7 +237,7 @@ def _overall_comment_text(review: ReviewResult) -> str:
 def _paragraph_comment_text(paragraph_review) -> str:  # type: ignore[no-untyped-def]
     parts: list[str] = []
     if paragraph_review.issues:
-        parts.append("这里主要要改的是：" + "；".join(_humanize_comment(item) for item in paragraph_review.issues))
+        parts.append("修改建议：" + "；".join(_humanize_comment(item) for item in paragraph_review.issues))
     if paragraph_review.suggestions:
         parts.append("建议你这样处理：" + "；".join(_humanize_comment(item) for item in paragraph_review.suggestions))
     if not parts:
