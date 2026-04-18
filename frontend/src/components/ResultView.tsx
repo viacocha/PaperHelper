@@ -27,7 +27,7 @@ export function ResultView({ review }: ResultViewProps) {
           <span>通过判断：{label(review.pass_probability)}</span>
         </div>
         <a className="download-link" href={reportDownloadUrl(review.suggested_report_name)}>
-          下载建议版 Word
+          下载批注版改后 Word
         </a>
       </div>
 

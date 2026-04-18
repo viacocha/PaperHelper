@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 
 from app.services.compare import compare_reviews
 from app.services.generator import generate_paper
-from app.services.report_generator import generate_compare_report, generate_report
+from app.services.report_generator import generate_annotated_report, generate_compare_report
 from app.services.reviewer import EssayReviewer
 from app.services.standards import load_standard_library
 
@@ -69,7 +69,7 @@ def review_essay():
         original_filename=original_name,
     )
     report_path = REPORT_DIR / review.suggested_report_name
-    generate_report(review, report_path)
+    generate_annotated_report(upload_path, review, report_path)
     generated_reports[review.suggested_report_name] = report_path
     return jsonify(review.to_dict())
 

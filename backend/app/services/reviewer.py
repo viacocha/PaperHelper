@@ -49,7 +49,11 @@ class EssayReviewer:
         paragraph_reviews = self._review_paragraphs(context)
         raw_total = sum(item.score for item in dimensions)
         total_score = round(self._apply_total_adjustments(raw_total, context, issues), 1)
-        report_name = f"{Path(display_name).stem}+修改建议.docx"
+        original_stem = Path(display_name).stem
+        if original_stem.endswith(("（改后）", "(改后)")):
+            report_name = f"{original_stem}.docx"
+        else:
+            report_name = f"{original_stem}（改后）.docx"
 
         return ReviewResult(
             filename=display_name,
@@ -263,6 +267,9 @@ class EssayReviewer:
                 strengths.append("体现了项目经理管理动作。")
             if any(token in paragraph for token in context.standard.required_artifacts + context.standard.required_processes):
                 strengths.append("命中了当前题型的关键术语。")
+                if not any(token in paragraph for token in ["例如", "具体", "数据", "指标", "发现", "纠正", "优化", "对比", "结果"]):
+                    issues.append("本段提到了过程或工具，但缺少具体使用场景和数据佐证。")
+                    suggestions.append("补充工具如何制定、如何使用、发现了什么问题、如何纠正以及产生的效果。")
 
             if not any(token in paragraph for token in ["我", "本人"]):
                 issues.append("本段缺少第一人称管理者视角。")
