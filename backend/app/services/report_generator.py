@@ -215,6 +215,10 @@ def _remove_existing_comment_markers(document: Document) -> None:
 
 
 def _overall_comment_text(review: ReviewResult) -> str:
+    word_text = f"正文字数约 {review.word_count} 字，考试建议不少于 {review.minimum_word_count} 字。"
+    if review.word_count < review.minimum_word_count:
+        word_text += "这篇字数不足，不能通过，必须先把主体内容补到 2000 字以上。"
+
     pass_text = {
         "high": "这篇整体基础不错，有较大机会通过",
         "medium": "这篇已经接近通过，但还需要把下面几处补扎实",
@@ -224,6 +228,7 @@ def _overall_comment_text(review: ReviewResult) -> str:
     should_fix = "；".join(item.title for item in review.should_fix[:4])
     text = (
         f"总评：{pass_text}。我按阅卷要求估分大约 {review.total_score}/75，及格参考线是 {review.pass_score}。"
+        f"{word_text}"
         f"这篇对应的题型是{review.standard.standard_name}。{review.summary}"
     )
     if must_fix:

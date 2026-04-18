@@ -62,6 +62,8 @@ class StandardMatch:
 class ReviewResult:
     filename: str
     standard: StandardMatch
+    word_count: int
+    minimum_word_count: int
     total_score: float
     pass_score: float
     pass_probability: Literal["high", "medium", "low"]

@@ -63,6 +63,8 @@ class EssayReviewer:
                 category=standard.category,  # type: ignore[arg-type]
                 confidence=round(confidence, 2),
             ),
+            word_count=parsed.word_count,
+            minimum_word_count=self.library.shared["min_words"],
             total_score=total_score,
             pass_score=self.library.pass_score,
             pass_probability=self._pass_probability(total_score),

@@ -53,6 +53,8 @@ export type ReviewResult = {
     category: string;
     confidence: number;
   };
+  word_count: number;
+  minimum_word_count: number;
   total_score: number;
   pass_score: number;
   pass_probability: "high" | "medium" | "low";
