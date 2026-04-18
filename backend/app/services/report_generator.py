@@ -216,31 +216,74 @@ def _remove_existing_comment_markers(document: Document) -> None:
 
 def _overall_comment_text(review: ReviewResult) -> str:
     pass_text = {
-        "high": "当前具备较高通过概率",
-        "medium": "接近通过，但仍需按批注修改",
-        "low": "当前通过风险高，建议大改后再提交",
+        "high": "这篇整体基础不错，有较大机会通过",
+        "medium": "这篇已经接近通过，但还需要把下面几处补扎实",
+        "low": "这篇现在通过风险比较高，建议先按批注做一次比较大的修改",
     }[review.pass_probability]
-    must_fix = "；".join(item.title for item in review.must_fix[:4]) or "暂无必须补写项"
-    should_fix = "；".join(item.title for item in review.should_fix[:4]) or "暂无重点补强项"
-    return (
-        f"总评：{pass_text}。预计得分：{review.total_score}/75，通过参考线：{review.pass_score}。"
-        f"匹配题型：{review.standard.standard_name}。总体结论：{review.summary}"
-        f"必须优先修改：{must_fix}。建议继续补强：{should_fix}。"
-        "修改时请优先补齐题目要求的过程、工具或文件，并把工具使用过程写到具体项目场景中。"
+    must_fix = "；".join(item.title for item in review.must_fix[:4])
+    should_fix = "；".join(item.title for item in review.should_fix[:4])
+    text = (
+        f"总评：{pass_text}。我按阅卷要求估分大约 {review.total_score}/75，及格参考线是 {review.pass_score}。"
+        f"这篇对应的题型是{review.standard.standard_name}。{review.summary}"
     )
+    if must_fix:
+        text += f"先改这些硬伤：{must_fix}。"
+    if should_fix:
+        text += f"如果时间够，再继续加强：{should_fix}。"
+    text += "修改时不要只背概念，重点把题目要求的过程、工具或文件写进自己的项目场景里，写清楚怎么用、发现了什么、最后有什么效果。"
+    return text
 
 
 def _paragraph_comment_text(paragraph_review) -> str:  # type: ignore[no-untyped-def]
     parts: list[str] = []
     if paragraph_review.issues:
-        parts.append("问题：" + "；".join(paragraph_review.issues))
+        parts.append("这里主要要改的是：" + "；".join(_humanize_comment(item) for item in paragraph_review.issues))
     if paragraph_review.suggestions:
-        parts.append("建议：" + "；".join(paragraph_review.suggestions))
+        parts.append("建议你这样处理：" + "；".join(_humanize_comment(item) for item in paragraph_review.suggestions))
     if not parts:
         return ""
     if paragraph_review.strengths:
-        parts.append("优点：" + "；".join(paragraph_review.strengths))
-    return "本段批注：" + " ".join(parts)
+        parts.append("这一段保留的点：" + "；".join(_humanize_comment(item) for item in paragraph_review.strengths))
+    return " ".join(parts)
+
+
+def _humanize_comment(text: str) -> str:
+    exact_replacements = {
+        "本段缺少第一人称管理者视角。": "这一段还看不出你作为项目经理具体做了什么",
+        "补充“我组织/我制定/我协调/我推动”等管理动作。": "建议补上“我组织、我制定、我协调、我推动”这类动作，让阅卷老师看到是你在管理项目",
+        "本段缺少问题-措施-结果闭环。": "这里还缺一条完整的处理线：遇到了什么问题、你怎么处理、最后效果如何",
+        "增加遇到的问题、采取的措施及最终效果。": "加上一个真实的小场景，把问题、措施和结果写完整",
+        "本段内容偏短，信息密度不足。": "这一段太短了，阅卷时会显得内容比较空",
+        "扩充本段中的项目事实、工具文档或结果。": "可以展开写项目事实、用到的工具文档，或者最后形成的结果",
+        "本段提到了过程或工具，但缺少具体使用场景和数据佐证。": "这里虽然提到了过程或工具，但还没有写清楚具体怎么用，也缺少数据或效果来支撑",
+        "补充工具如何制定、如何使用、发现了什么问题、如何纠正以及产生的效果。": "建议把工具的制定过程、使用过程、发现的问题、纠正办法和最后效果补出来",
+        "包含项目事实信息。": "这一段有项目事实，可以保留",
+        "体现了项目经理管理动作。": "这里能看出一些项目经理的管理动作",
+        "命中了当前题型的关键术语。": "这里提到了这个题目的关键词",
+    }
+    if text in exact_replacements:
+        return exact_replacements[text]
+
+    replacements = {
+        "本段": "这里",
+        "缺少": "还没有写出",
+        "补充": "补上",
+        "增加": "加上",
+        "扩充": "展开写一下",
+        "命中了": "提到了",
+        "当前题型": "这个题目",
+        "关键术语": "关键词",
+        "包含": "有",
+        "体现了": "能看出",
+        "信息密度不足": "内容还偏薄",
+        "项目经理管理动作": "项目经理的管理动作",
+        "问题-措施-结果闭环": "问题、处理措施和结果这一条线",
+        "具体使用场景和数据佐证": "具体怎么用、用了以后有什么数据或效果",
+    }
+    result = text.strip().rstrip("。")
+    for old, new in replacements.items():
+        result = result.replace(old, new)
+    return result
 
 
 def _patch_comments_part(temp_path: Path, output_path: Path, comment_texts: list[str]) -> None:
@@ -264,8 +307,8 @@ def _build_comments_xml(comment_texts: list[str]) -> bytes:
     for index, text in enumerate(comment_texts):
         comment = etree.SubElement(root, f"{{{WORD_NS}}}comment")
         comment.set(f"{{{WORD_NS}}}id", str(index))
-        comment.set(f"{{{WORD_NS}}}author", "PaperHelper")
-        comment.set(f"{{{WORD_NS}}}initials", "PH")
+        comment.set(f"{{{WORD_NS}}}author", "王老师")
+        comment.set(f"{{{WORD_NS}}}initials", "WL")
         comment.set(f"{{{WORD_NS}}}date", timestamp)
         paragraph = etree.SubElement(comment, f"{{{WORD_NS}}}p")
         run = etree.SubElement(paragraph, f"{{{WORD_NS}}}r")
